@@ -48,31 +48,34 @@ Build a distributed Mafia game where:
 - **Engine model:** One engine per game (isolation, Kubernetes-native cleanup via OwnerReferences, easier debugging)
 - **CRD usage:** Justified for learning operators + portfolio value (declarative API, status tracking, automatic garbage collection)
 
-
-
 ---
 
-## Phase 1 – Local Dev Environment Bootstrap
+## DONE: Phase 1 – Local Dev Environment Bootstrap
 
-**Time:** ~2–3 hours
+**Time:** ~1 hour
 
 ### Goals
 - Be able to iterate fast locally
 - No cloud dependency
+- Environment/cloud agnostic
 
 ### Tasks
-- Create a local Kubernetes cluster (`kind` or `k3d`)
-- Install:
-  - Prometheus
-  - Grafana
-  - Loki
-- Create a Makefile or task runner for:
-  - cluster up/down
-  - deploy all core components
+- Create a local Kubernetes cluster using Kind
+- Create bootstrap scripts for cluster up/down
+- Make all configurations easily adjustable
 
-### Open Decisions
-- `kind` vs `k3d`
-- Helm vs raw manifests for infra
+### Decisions Made
+- **Cluster:** Kind (single node for local dev)
+- **Monitoring:** Deferred to Phase 11 (not needed initially)
+- **Observability (minimal):** `kubectl top` for cluster health, Kafka consumer for game events
+- **Cloud agnostic:** All manifests work on any Kubernetes cluster
+- **Test configuration:** 5 players, small Ollama model (llama3.2:1b or 3b)
+- **Future:** Experiment on cloud VM with larger hardware once game is functional
+
+### Resource Estimates (Local Dev)
+- CPU: 4-6 cores
+- RAM: 8-16GB
+- Ollama: Small model (1-3B parameters) for testing
 
 ---
 
@@ -140,13 +143,13 @@ Build a distributed Mafia game where:
   - Subscribes to assigned topics
   - Publishes structured responses
 - Implement:
-  - Turn-based message handling
+  - Reactive message handling (not turn-based)
   - Vote submission
-- Run 3–5 agents locally and simulate a game
+- Run 5 agents locally and simulate a game
 
-### Open Decisions
-- HTTP vs gRPC between agent and engine
-- Push vs pull turn signaling
+### Decisions Made
+- **Player count for testing:** 5 players (configurable)
+- **Communication:** All via Kafka (no direct HTTP/gRPC between agent and engine)
 
 ---
 
@@ -254,7 +257,7 @@ Build a distributed Mafia game where:
 ### Tasks
 - Deploy Ollama as a centralized service
 - Configure:
-  - model download
+  - model download (configurable via environment)
   - concurrency limits
 - Modify agents:
   - Build prompts
@@ -262,8 +265,10 @@ Build a distributed Mafia game where:
 - Capture prompts + responses as events/logs
 - Ensure graceful fallback to mock mode if Ollama unavailable
 
-### Open Decisions
-- Small vs medium model
+### Decisions Made
+- **Local testing:** Small model (llama3.2:1b or 3b)
+- **Cloud/production:** Configurable, experiment with larger models
+- **Model selection:** Environment variable, easy to swap
 
 ---
 
@@ -290,15 +295,18 @@ Build a distributed Mafia game where:
 
 ---
 
-## Phase 11 – Observability Deep Dive
+## Phase 11 – Observability Stack (Deferred from Phase 1)
 
 **Time:** ~2–3 hours
 
 ### Goals
+- Add monitoring infrastructure (skipped in Phase 1)
 - Make the system explainable
 - Identify bottlenecks
 
 ### Tasks
+- Deploy Prometheus + Grafana via Helm (kube-prometheus-stack)
+- Optionally add Loki for log aggregation
 - Add structured logging (JSON)
 - Export Prometheus metrics:
   - LLM latency
@@ -312,6 +320,11 @@ Build a distributed Mafia game where:
 ### Open Decisions
 - Trace reasoning chains (Tempo) or logs only
 - Sampling vs full capture
+
+### Note
+Monitoring was intentionally deferred from Phase 1. Before this phase:
+- Use `kubectl top nodes/pods` for cluster health
+- Use `kafka-console-consumer` to watch game events
 
 ---
 
