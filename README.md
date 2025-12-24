@@ -3,12 +3,6 @@
 > [!NOTE]
 > Draft document!
 
-Kubernetes pods playing Mafia using AI reasoning.
-
----
-
-## What is this?
-
 A classic Mafia game where each player is an LLM-backed Kubernetes pod. Players communicate via Kafka, reason with Ollama, and eliminated players get deleted from the cluster. The game is managed declaratively using a custom CRD.
 
 ---
