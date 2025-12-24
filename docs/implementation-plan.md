@@ -1,7 +1,7 @@
 # Mafia LLM Kubernetes Game – Incremental Implementation Plan
 
-> [!NOTE]  
-> Temporary document!
+> [!NOTE]
+> Temporary document! do not add to main documentation!
 
 ## Project Goal
 
@@ -12,17 +12,9 @@ Build a distributed Mafia game where:
 - Game state is observable and debuggable
 - Architecture is cloud-agnostic and production-inspired
 
-## Open Questions (To Resolve During Implementation)
-
-- [ ] Kafka topic partitioning strategy
-- [ ] Event schema format (JSON vs Protobuf)
-- [ ] Agent timeout handling
-- [ ] Graceful shutdown behavior
-- [ ] CRD versioning strategy
-- [ ] 
 ---
 
-## - DONE: Phase 0 – Architecture Lock-In (No Code Yet) 
+## DONE: Phase 0 – Architecture Lock-In (No Code Yet)
 
 **Time:** ~2–3 hours
 
@@ -43,10 +35,11 @@ Build a distributed Mafia game where:
 - Decide repo structure (mono vs multi-repo)
 
 ### Decisions Made
-- **Language:** Python for Player Agents (faster iteration, easier LLM integration), Go for Controller (industry standard for operators)
+- **Language:** Go for Controller and Game Engine (industry standard for operators, tightly coupled components), Python for Player Agents (faster iteration, easier LLM integration)
 - **Repo structure:** Monorepo (single developer, tightly coupled components, atomic changes)
 - **Engine model:** One engine per game (isolation, Kubernetes-native cleanup via OwnerReferences, easier debugging)
 - **CRD usage:** Justified for learning operators + portfolio value (declarative API, status tracking, automatic garbage collection)
+- **Event schema:** JSON with strongly-typed models (human-readable, easier debugging, sufficient for project scale)
 
 ---
 
@@ -79,29 +72,40 @@ Build a distributed Mafia game where:
 
 ---
 
-## Phase 2 – Kafka Backbone (Event Plumbing)
+## IN PROGRESS: Phase 2 – Kafka Backbone & Dev Tooling
 
 **Time:** ~3–4 hours
 
 ### Goals
-- Establish the system’s nervous system early
+- Establish the system's nervous system early
 - Everything meaningful becomes an event
+- Set up quality gates before writing code
 
 ### Tasks
+- **Pre-commit setup:**
+  - Python: ruff (lint + format), bandit (security), mypy (types)
+  - Go: golangci-lint, gosec
+  - Pre-commit hooks configuration
+- **GitHub Actions CI:**
+  - Lint and security checks
+  - Unit tests
+  - Docker image builds
 - Deploy Kafka using Strimzi Operator
 - Create initial topics:
-  - `game.events`
-  - `game.system`
-  - `game.votes`
+  - `game.events` - public game events (deaths, phase changes)
+  - `game.chat.<game_id>` - public discussion
+  - `game.mafia.<game_id>` - private mafia channel
+  - `game.votes.<game_id>` - vote submissions
 - Write a minimal producer + consumer (local binary or pod)
 - Verify:
   - ordering
   - consumer groups
   - offsets
 
-### Open Decisions
-- One topic per game vs shared topic with `game_id` key
-- JSON vs Protobuf event schemas
+### Decisions Made
+- **Topic strategy:** Per-game topics with game_id in topic name (isolation, easier cleanup)
+- **Event format:** JSON with Pydantic models (Python) / structs with tags (Go)
+- **Python environment:** Python 3.12.3, venv at `src/.venv`
 
 ---
 
@@ -114,7 +118,7 @@ Build a distributed Mafia game where:
 - No intelligence yet, only mechanics
 
 ### Tasks
-- Create `game-engine` service:
+- Create `game-engine` service in **Go**:
   - Subscribes to Kafka
   - Maintains in-memory game state
 - Implement:
@@ -122,11 +126,12 @@ Build a distributed Mafia game where:
   - Player registration
   - Day/Night phase toggling
 - Emit system events back to Kafka
+- Unit tests for game logic
 
 ### Open Decisions
 - Stateless engine + replay on restart vs in-memory only
 - Single-threaded loop vs async workers
-- Potentially fork existing mafia engines for skeleton
+- Potentially fork existing mafia engines for skeleton for game engine and frontend design
 
 ---
 
@@ -295,59 +300,7 @@ Build a distributed Mafia game where:
 
 ---
 
-## Phase 11 – Observability Stack (Deferred from Phase 1)
-
-**Time:** ~2–3 hours
-
-### Goals
-- Add monitoring infrastructure (skipped in Phase 1)
-- Make the system explainable
-- Identify bottlenecks
-
-### Tasks
-- Deploy Prometheus + Grafana via Helm (kube-prometheus-stack)
-- Optionally add Loki for log aggregation
-- Add structured logging (JSON)
-- Export Prometheus metrics:
-  - LLM latency
-  - Kafka lag
-  - Phase duration
-- Create Grafana dashboards:
-  - Timeline view per game
-  - Per-player behavior
-  - Engine health
-
-### Open Decisions
-- Trace reasoning chains (Tempo) or logs only
-- Sampling vs full capture
-
-### Note
-Monitoring was intentionally deferred from Phase 1. Before this phase:
-- Use `kubectl top nodes/pods` for cluster health
-- Use `kafka-console-consumer` to watch game events
-
----
-
-## Phase 12 – Game State Persistence (Optional)
-
-**Time:** ~2–3 hours
-
-### Goals
-- Replay games
-- Enable analytics and UI later
-
-### Tasks (choose one)
-- Option A: Kafka-only event sourcing
-- Option B: Snapshot state to Postgres
-- Option C: Hybrid (Kafka + DB projections)
-
-### Open Decisions
-- DB choice (Postgres, SQLite, none)
-- Snapshot frequency
-
----
-
-## Phase 13 – CI/CD & Validation
+## Phase 11 – CI/CD & Validation
 
 **Time:** ~2–3 hours
 
@@ -369,32 +322,7 @@ Monitoring was intentionally deferred from Phase 1. Before this phase:
 
 ---
 
-## Phase 14 – GitOps Deployment
-
-**Time:** ~2–3 hours
-
-### Goals
-- Declarative, Git-driven deployments
-- Practice production-grade deployment patterns
-
-### Tasks
-- Set up ArgoCD or Flux in the cluster
-- Create GitOps structure:
-  - `gitops/base/` – base manifests
-  - `gitops/overlays/local/` – local dev overrides
-  - `gitops/overlays/prod/` – production config (future)
-- Configure ApplicationSet or Kustomization for:
-  - Infrastructure components (Kafka, Ollama, monitoring)
-  - Game controller
-- Enable auto-sync for local environment
-- Document GitOps workflow in README
-
-### Decisions Made
-- ArgoCD recommended (more visual, good learning experience)
-
----
-
-## Phase 15 – Bootstrap Guide & Quick Start
+## Phase 12 – Bootstrap Guide & Quick Start
 
 **Time:** ~2–3 hours
 
@@ -429,7 +357,21 @@ Monitoring was intentionally deferred from Phase 1. Before this phase:
 
 ---
 
-## Phase 16 – Documentation & Presentation
+## Phase 13 – Testing & Experimenting
+
+### Goals
+- Test the optimal configurations for the best game and AI quality
+
+### Tasks
+- Run the app on different providors
+- RUn the app on different settings / configurations
+
+### Deliverables
+- Create document of the experiments findings
+
+---
+
+## Phase 14 – Documentation & Presentation
 
 **Time:** ~3–4 hours
 
@@ -468,33 +410,9 @@ Monitoring was intentionally deferred from Phase 1. Before this phase:
 
 ---
 
-## Phase 17 – Future Extensions (Explicitly Out of Scope)
+## Phase 15 – Future Extensions (Optional)
 
-- Web UI for live game visualization
-- Multi-game tournaments
-- Role variety (detective, doctor)
-- Model comparison experiments
-- Multi-cluster games
-
+- implement gitops
+- game persistense in a db
+- add prometheus + grafana + loki
 ---
-
-## Guiding Principles
-
-- CRD = intent, not data dump
-- Kafka = source of truth
-- Engine = authority
-- Agents = untrusted participants
-- Observability first, polish later
-
----
-
-## Success Criteria (v1)
-
-- One `kubectl apply` starts a game
-- Players reason and vote
-- Pods are deleted when eliminated
-- Full transcript observable
-- Game ends deterministically
-
----
-

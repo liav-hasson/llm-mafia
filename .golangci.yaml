@@ -1,0 +1,24 @@
+run:
+  timeout: 3m
+  tests: True
+
+linters:
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - ineffassign
+    - unused
+    - gofmt
+    - goimports
+    - gosec
+  disable:
+    - gocyclo
+    - funlen
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+output:
+  format: colored-line-number

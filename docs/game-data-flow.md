@@ -1,6 +1,6 @@
 # Game Logic & LLM Interaction
 
-> [!NOTE]  
+> [!NOTE]
 > Draft document!
 
 ## Game Flow

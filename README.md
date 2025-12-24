@@ -1,6 +1,6 @@
 # LLM-Mafia
 
-> [!NOTE]  
+> [!NOTE]
 > Draft document!
 
 Kubernetes pods playing Mafia using AI reasoning.
