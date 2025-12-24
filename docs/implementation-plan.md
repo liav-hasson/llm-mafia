@@ -72,7 +72,7 @@ Build a distributed Mafia game where:
 
 ---
 
-## IN PROGRESS: Phase 2 – Kafka Backbone & Dev Tooling
+## DONE: Phase 2 – Kafka Backbone & Dev Tooling
 
 **Time:** ~3–4 hours
 

@@ -1,0 +1,58 @@
+# Kafka topics for Mafia game
+# All topics use single partition for strict message ordering
+---
+# Game state changes - phase transitions, deaths, role assignments, game start/end, win conditions
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: game.events
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: mafia
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: "3600000"  # 1 hour
+---
+# Public discussion during Day phase - what players say to each other
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: game.chat
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: mafia
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: "3600000"
+---
+# Private night-time coordination - mafia discuss who to kill
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: game.mafia
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: mafia
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: "3600000"
+---
+# Vote submissions - who each player votes to eliminate
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: game.votes
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: mafia
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: "3600000"

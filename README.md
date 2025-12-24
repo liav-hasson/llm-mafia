@@ -10,6 +10,7 @@ A classic Mafia game where each player is an LLM-backed Kubernetes pod. Players 
 ## Requirements
 ```
 # system requirements for running the llm
+# utilities requirements and binaries (kubectl, etc...)
 ```
 ---
 

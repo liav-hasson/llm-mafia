@@ -1,0 +1,88 @@
+# Kafka cluster (KRaft mode - no Zookeeper)
+# Docs: https://strimzi.io/docs/operators/latest/configuring
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: mafia
+  namespace: kafka
+  annotations:
+    # Disables Zookeeper creation
+    strimzi.io/kraft: "enabled"
+    strimzi.io/node-pools: "enabled"
+spec:
+  kafka:
+    version: 4.0.0
+    metadataVersion: 4.0-IV0
+    # Listeners - how clients connect to Kafka
+    # No TLS or authentication
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+    config:
+      # Single broker settings (replication factor must be 1)
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+      # Disable auto topic creation (we manage topics via CRDs)
+      auto.create.topics.enable: "false"
+  # Entity Operator - manages KafkaTopic and KafkaUser CRDs
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+
+---
+# KRaft controller pool (replaces Zookeeper)
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: controller
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: mafia
+spec:
+  replicas: 1
+  roles:
+    - controller
+  storage:
+    # Creates PVC that uses default StorageClass
+    # Data exists in the container of the Kind node
+    type: persistent-claim
+    size: 1Gi
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+---
+# Kafka broker pool
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: broker
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: mafia
+spec:
+  # Consider scaling to 3 nodes
+  replicas: 1
+  roles:
+    - broker
+  storage:
+    # Creates PVC that uses default StorageClass
+    # Data exists in the container of the Kind node 
+    type: persistent-claim
+    size: 5Gi
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 1Gi
+      cpu: 500m
