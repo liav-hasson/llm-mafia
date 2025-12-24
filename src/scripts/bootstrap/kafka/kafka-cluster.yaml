@@ -76,7 +76,7 @@ spec:
     - broker
   storage:
     # Creates PVC that uses default StorageClass
-    # Data exists in the container of the Kind node 
+    # Data exists in the container of the Kind node
     type: persistent-claim
     size: 5Gi
   resources:

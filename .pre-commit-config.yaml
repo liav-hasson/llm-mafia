@@ -13,7 +13,7 @@ repos:
       - id: mypy
         args: ["--config-file=pyproject.toml"]
         # Add type stubs here as needed, e.g., types-requests
-        additional_dependencies: [] 
+        additional_dependencies: []
 
   - repo: https://github.com/golangci/golangci-lint
     rev: v1.57.2
@@ -47,4 +47,3 @@ repos:
       - id: conventional-pre-commit
         stages: [commit-msg]
         args: [feat, fix, docs, refactor, test, chore, style, perf, ci, build]
-

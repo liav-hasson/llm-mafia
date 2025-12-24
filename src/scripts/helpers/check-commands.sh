@@ -7,7 +7,7 @@ check_commands() {
 
     local script_name="$(basename "${BASH_SOURCE[1]}")"
     local script_parent_dir=$(basename "$(dirname "${BASH_SOURCE[1]}")")
-    
+
     echo "[INFO] - Checking commands in $script_parent_dir/$script_name."
 
     # Count missing commands
@@ -18,7 +18,7 @@ check_commands() {
         if ! command -v "$command" >/dev/null 2>&1; then
             echo "[ERROR] - Command '$command' not found."
             ((FAILED++))
-        fi 
+        fi
     done
 
     if [[ $FAILED -gt 0 ]]; then

@@ -1,6 +1,6 @@
 # Kafka
 
-Event backbone for game communication. All game state changes and player interactions flow through Kafka. 
+Event backbone for game communication. All game state changes and player interactions flow through Kafka.
 
 ---
 
