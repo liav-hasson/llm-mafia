@@ -1,11 +1,16 @@
 # Kafka
 
+> [!NOTE]
+> Draft document!
+
 Event backbone for game communication. All game state changes and player interactions flow through Kafka.
 
 ---
 
 ## Architecture
 
+> [!NOTE]
+> TODO: Change to actual diagram
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │   Engine    │────▶│    Kafka    │◀────│   Players   │
@@ -25,10 +30,20 @@ Event backbone for game communication. All game state changes and player interac
 |-------|-----------|---------|
 | `game.events` | Engine → Players | Phase changes, deaths, game state |
 | `game.chat` | Players → All | Public discussion |
-| `game.mafia` | Mafia → Mafia | Private coordination |
+| `game.mafia` | Mafia → Mafia | Private night coordination |
 | `game.votes` | Players → Engine | Vote submissions |
+| `game.thoughts` | Players → Logging | LLM reasoning (observability only) |
+| `game.doctor` | Doctor → Engine | Night protection target |
+| `game.sheriff` | Sheriff → Engine | Night investigation target |
 
 All topics use single partition for strict message ordering.
+
+### Topic Isolation
+
+Special roles have dedicated topics to prevent information leakage:
+- Mafia cannot see who doctor protects
+- Mafia cannot see who sheriff investigates
+- Engine resolves all night actions privately
 
 ---
 
@@ -51,7 +66,7 @@ Benefits:
 
 ## Cluster Configuration
 
-- **Mode:** KRaft (Zookeeper depricated)
+- **Mode:** KRaft (Zookeeper deprecated)
 - **Brokers:** 1 (TODO: scale to 3)
 - **Storage:** Persistent on node (survives pod restarts)
 - **Listener:** Plain on port 9092 (TODO: implement TLS)

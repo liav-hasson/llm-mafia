@@ -56,3 +56,45 @@ spec:
   replicas: 1
   config:
     retention.ms: "3600000"
+---
+# Player thoughts - all players publish, logging consumes
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: game.thoughts
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: mafia
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: "3600000"
+---
+# Doctor role - who to protect at night
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: game.doctor
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: mafia
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: "3600000"
+---
+# Sheriff role - who to investigate at night
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: game.sheriff
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: mafia
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: "3600000"

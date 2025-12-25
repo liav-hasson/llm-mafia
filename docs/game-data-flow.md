@@ -5,6 +5,8 @@
 
 ## Game Flow
 
+> [!NOTE]
+> TODO: Change to actual diagram
 ```
 GAME START
     │

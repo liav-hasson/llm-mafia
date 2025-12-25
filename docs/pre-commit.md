@@ -1,5 +1,8 @@
 # Pre-Commit Hooks
 
+> [!NOTE]
+> Draft document!
+
 Automated code quality checks that run before each commit.
 
 ---

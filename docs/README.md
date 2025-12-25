@@ -18,13 +18,13 @@ TODO:
 
 - [Game Data Flow](game-data-flow.md) - Game logic and LLM interaction
 - [Kafka](kafka.md) - Event backbone and topic design
+- [Engine](engine.md) - Game engine architecture and decisions
 
 ```
 TODO:
 # update when changing things
 # add images
 # kind cluster
-# engine
 # player
 # scripts
 # frontend
