@@ -1,14 +1,11 @@
+// This file containes player and roles structs and supporting methods
+
 package domain
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 )
-
-// ErrMaxPlayersReached is returned when trying to create more than 10 players
-// Using a package-level error variable is idiomatic Go (sentinel error pattern)
-var ErrMaxPlayersReached = errors.New("maximum player limit reached (10)")
 
 // player base data
 type Player struct {
@@ -68,24 +65,19 @@ func CreatePlayerID() string {
 // availableNames is a list of names to assign to players
 // unexported since it's only used internally
 var availableNames = []string{
-	"Jana Ellison", "Nicholas Becker",
-	"Lourdes Shaw", "Ross Whitaker",
+	"Gilbert McDonald", "Dorothy Bird",
+	"Ernest Preston", "Vincent Schultz",
 	"Joanne Sloan", "Lana Moran",
 	"Adrienne Fuller", "Greg Bennett",
 	"Curt Simon", "Rachel McMillan",
+	"Dustin Eastman", "Willard Mendez",
 }
 
 // CreatePlayerName returns sequential names from availableNames
-// Returns ErrMaxPlayersReached if all 10 names have been used
 // Thread-safe: shares mutex with CreatePlayerID
 func CreatePlayerName() (string, error) {
 	playerMutex.Lock()
 	defer playerMutex.Unlock()
-
-	// check if we've exhausted all available names
-	if nameCounter >= len(availableNames) {
-		return "", ErrMaxPlayersReached
-	}
 
 	// get current name, then increment for next call
 	name := availableNames[nameCounter]

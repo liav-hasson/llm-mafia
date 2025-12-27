@@ -1,3 +1,5 @@
+// This file containes game phase variables
+
 package domain
 
 // creates type "Phase" with underlying int value

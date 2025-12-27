@@ -1,3 +1,5 @@
+// This file containes game state structs and supporting methods
+
 package domain
 
 import "github.com/xyproto/randomstring"
@@ -48,49 +50,7 @@ func (w Winner) String() string {
 	}
 }
 
-// initialize new game state
-func NewGameState() *GameState {
-	return &GameState{
-		ID:     CreateGameID(),
-		Round:  1,
-		Phase:  PhaseWaiting,
-		Winner: WinnerNone,
-		// must use make() to init before use, otherwise nil
-		Players: make(map[string]*Player),
-		Votes:   make(map[string]string),
-		// no need to init MafiaTarget, DoctorTarget SheriffTarget
-	}
-}
-
-// create random game ID
-func CreateGameID() string {
-	const idlength = 5
-	return randomstring.String(idlength)
-}
-
-// GetPlayer retrieves a player by ID from the game
-// Returns nil if player doesn't exist
-func (g *GameState) GetPlayer(id string) *Player {
-	return g.Players[id]
-}
-
-// GetAlivePlayers returns a slice of all players who are still alive
-func (g *GameState) GetAlivePlayers() []*Player {
-	// create empty slice to collect alive players
-	// using var instead of make() — starts as nil, append works on nil slices
-	var alive []*Player
-
-	// range over map: gives key (id) and value (player)
-	// underscore (_) ignores the key since we don't need it
-	// potentially sort the output for prnting, Go map lookup is random
-	for _, player := range g.Players {
-		if player.Alive {
-			alive = append(alive, player)
-		}
-	}
-
-	return alive
-}
+// --- reading game state --- //
 
 // IsGameOver checks if win conditions are met and updates the Winner field
 // Returns true if game has ended
@@ -130,7 +90,70 @@ func (g *GameState) IsGameOver() bool {
 	return false
 }
 
-// mutate game state
+// GetPlayer retrieves a player by ID from the game
+// Returns nil if player doesn't exist
+func (g *GameState) GetPlayer(id string) *Player {
+	return g.Players[id]
+}
+
+// GetAlivePlayers returns a slice of all players who are still alive
+func (g *GameState) GetAlivePlayers() []*Player {
+	// create empty slice to collect alive players
+	// using var instead of make() — starts as nil, append works on nil slices
+	var alive []*Player
+
+	// range over map: gives key (id) and value (player)
+	// underscore (_) ignores the key since we don't need it
+	// potentially sort the output for prnting, Go map lookup is random
+	for _, player := range g.Players {
+		if player.Alive {
+			alive = append(alive, player)
+		}
+	}
+
+	return alive
+}
+
+// GetPlayerCount returns the total number of players in the game
+func (g *GameState) GetPlayerCount() int {
+	return len(g.Players)
+}
+
+// GetPlayersByRole returns all players with the specified role
+// Includes both alive and dead players
+func (g *GameState) GetPlayersByRole(role Role) []*Player {
+	var players []*Player
+
+	for _, player := range g.Players {
+		if player.Role == role {
+			players = append(players, player)
+		}
+	}
+
+	return players
+}
+
+// --- mutating game state --- //
+
+// initialize new game state
+func NewGameState() *GameState {
+	return &GameState{
+		ID:     CreateGameID(),
+		Round:  1,
+		Phase:  PhaseWaiting,
+		Winner: WinnerNone,
+		// must use make() to init before use, otherwise nil
+		Players: make(map[string]*Player),
+		Votes:   make(map[string]string),
+		// no need to init MafiaTarget, DoctorTarget SheriffTarget
+	}
+}
+
+// create random game ID
+func CreateGameID() string {
+	const idlength = 5
+	return randomstring.String(idlength)
+}
 
 // AddPlayer adds a player to the game
 // Returns the added player, or nil if player with same ID already exists
@@ -175,25 +198,6 @@ func (g *GameState) ResetPhaseData() {
 	g.MafiaTarget = ""
 	g.DoctorTarget = ""
 	g.SheriffTarget = ""
-}
-
-// GetPlayerCount returns the total number of players in the game
-func (g *GameState) GetPlayerCount() int {
-	return len(g.Players)
-}
-
-// GetPlayersByRole returns all players with the specified role
-// Includes both alive and dead players
-func (g *GameState) GetPlayersByRole(role Role) []*Player {
-	var players []*Player
-
-	for _, player := range g.Players {
-		if player.Role == role {
-			players = append(players, player)
-		}
-	}
-
-	return players
 }
 
 // RegisterVote records a day vote from voter to target
