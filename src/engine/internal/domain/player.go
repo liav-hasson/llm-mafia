@@ -1,5 +1,15 @@
 package domain
 
+import (
+	"errors"
+	"fmt"
+	"sync"
+)
+
+// ErrMaxPlayersReached is returned when trying to create more than 10 players
+// Using a package-level error variable is idiomatic Go (sentinel error pattern)
+var ErrMaxPlayersReached = errors.New("maximum player limit reached (10)")
+
 // player base data
 type Player struct {
 	ID    string
@@ -35,6 +45,76 @@ func (r Role) String() string {
 	default:
 		return "invalid"
 	}
+}
+
+// package-level counter for generating player IDs
+// using mutex to ensure thread-safety (concurrent Kafka events)
+var (
+	playerCounter int
+	nameCounter   int
+	playerMutex   sync.Mutex
+)
+
+// CreatePlayerID generates sequential player IDs: player-1, player-2, etc.
+// Thread-safe: uses mutex to protect counter from race conditions
+func CreatePlayerID() string {
+	playerMutex.Lock()         // acquire lock - blocks other goroutines
+	defer playerMutex.Unlock() // release lock when function returns
+
+	playerCounter++
+	return fmt.Sprintf("player-%d", playerCounter)
+}
+
+// availableNames is a list of names to assign to players
+// unexported since it's only used internally
+var availableNames = []string{
+	"Jana Ellison", "Nicholas Becker",
+	"Lourdes Shaw", "Ross Whitaker",
+	"Joanne Sloan", "Lana Moran",
+	"Adrienne Fuller", "Greg Bennett",
+	"Curt Simon", "Rachel McMillan",
+}
+
+// CreatePlayerName returns sequential names from availableNames
+// Returns ErrMaxPlayersReached if all 10 names have been used
+// Thread-safe: shares mutex with CreatePlayerID
+func CreatePlayerName() (string, error) {
+	playerMutex.Lock()
+	defer playerMutex.Unlock()
+
+	// check if we've exhausted all available names
+	if nameCounter >= len(availableNames) {
+		return "", ErrMaxPlayersReached
+	}
+
+	// get current name, then increment for next call
+	name := availableNames[nameCounter]
+	nameCounter++
+
+	return name, nil
+}
+
+// NewPlayer creates a new player with the given parameters
+// If id is empty, generates one using CreatePlayerID()
+// If name is empty, generates one using CreatePlayerName()
+// Returns ErrMaxPlayersReached if auto-generating name and limit exceeded
+func NewPlayer(id, name string, role Role) (*Player, error) {
+	if id == "" {
+		id = CreatePlayerID()
+	}
+	if name == "" {
+		var err error
+		name, err = CreatePlayerName()
+		if err != nil {
+			return nil, err // propagate the error to caller
+		}
+	}
+	return &Player{
+		ID:    id,
+		Name:  name,
+		Role:  role,
+		Alive: true, // new players start alive
+	}, nil
 }
 
 // player state helpers
