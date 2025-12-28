@@ -77,6 +77,6 @@ func IsTie(votes map[string]string) bool {
 		return true
 	}
 
-	// else return false
+	// no tie
 	return false
 }

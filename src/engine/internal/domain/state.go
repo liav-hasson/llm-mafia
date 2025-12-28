@@ -2,7 +2,11 @@
 
 package domain
 
-import "github.com/xyproto/randomstring"
+import (
+	"math/rand"
+
+	"github.com/xyproto/randomstring"
+)
 
 // live game status data
 type GameState struct {
@@ -52,6 +56,48 @@ func (w Winner) String() string {
 
 // --- reading game state --- //
 
+// GetPlayer retrieves a player by ID from the game
+// Returns nil if player doesn't exist
+func (g *GameState) GetPlayer(id string) *Player {
+	return g.Players[id]
+}
+
+// GetAlivePlayers returns a slice of all players who are still alive
+func (g *GameState) GetAlivePlayers() []*Player {
+	// create empty slice to collect alive players
+	// using var instead of make() — starts as nil, append works on nil slices
+	var alive []*Player
+
+	// range over map: gives key (id) and value (player)
+	// underscore (_) ignores the key since we don't need it
+	for _, player := range g.Players {
+		if player.Alive {
+			alive = append(alive, player)
+		}
+	}
+
+	return alive
+}
+
+// GetPlayerCount returns the total number of players in the game
+func (g *GameState) GetPlayerCount() int {
+	return len(g.Players)
+}
+
+// GetPlayersByRole returns all players with the specified role
+// Includes both alive and dead players
+func (g *GameState) GetPlayersByRole(role Role) []*Player {
+	var players []*Player
+
+	for _, player := range g.Players {
+		if player.Role == role {
+			players = append(players, player)
+		}
+	}
+
+	return players
+}
+
 // IsGameOver checks if win conditions are met and updates the Winner field
 // Returns true if game has ended
 // Win conditions:
@@ -90,49 +136,6 @@ func (g *GameState) IsGameOver() bool {
 	return false
 }
 
-// GetPlayer retrieves a player by ID from the game
-// Returns nil if player doesn't exist
-func (g *GameState) GetPlayer(id string) *Player {
-	return g.Players[id]
-}
-
-// GetAlivePlayers returns a slice of all players who are still alive
-func (g *GameState) GetAlivePlayers() []*Player {
-	// create empty slice to collect alive players
-	// using var instead of make() — starts as nil, append works on nil slices
-	var alive []*Player
-
-	// range over map: gives key (id) and value (player)
-	// underscore (_) ignores the key since we don't need it
-	// potentially sort the output for prnting, Go map lookup is random
-	for _, player := range g.Players {
-		if player.Alive {
-			alive = append(alive, player)
-		}
-	}
-
-	return alive
-}
-
-// GetPlayerCount returns the total number of players in the game
-func (g *GameState) GetPlayerCount() int {
-	return len(g.Players)
-}
-
-// GetPlayersByRole returns all players with the specified role
-// Includes both alive and dead players
-func (g *GameState) GetPlayersByRole(role Role) []*Player {
-	var players []*Player
-
-	for _, player := range g.Players {
-		if player.Role == role {
-			players = append(players, player)
-		}
-	}
-
-	return players
-}
-
 // --- mutating game state --- //
 
 // initialize new game state
@@ -153,6 +156,29 @@ func NewGameState() *GameState {
 func CreateGameID() string {
 	const idlength = 5
 	return randomstring.String(idlength)
+}
+
+func (g *GameState) ShufflePlayerOrder() []*Player {
+	players := g.GetAlivePlayers()
+
+	rand.Shuffle(len(players), func(i, j int) {
+		players[i], players[j] = players[j], players[i]
+	})
+
+	return players
+}
+
+// assign roles to players, takes map[Role]int from 'GetRoleDistribution()'
+func (g *GameState) AssignRolesToPlayers(roleDistribution map[Role]int) {
+	shuffledPlayers := g.ShufflePlayerOrder()
+	playerIndex := 0
+
+	for role, count := range roleDistribution {
+		for range count {
+			shuffledPlayers[playerIndex].Role = role
+			playerIndex++
+		}
+	}
 }
 
 // AddPlayer adds a player to the game

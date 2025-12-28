@@ -3,11 +3,14 @@
 package domain
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 )
 
-// player base data
+// --- Player struct --- //
+
+// Player holds base player data
 type Player struct {
 	ID    string
 	Name  string
@@ -16,7 +19,31 @@ type Player struct {
 	// TODO: add personallity trait (e.g. timid, agressive, nuetral...)
 }
 
-// possible player roles
+// NewPlayer creates a new player with the given parameters
+// If id is empty, generates one using CreatePlayerID()
+// If name is empty, generates one using CreatePlayerName()
+func NewPlayer(id, name string, role Role) (*Player, error) {
+	if id == "" {
+		id = CreatePlayerID()
+	}
+	if name == "" {
+		var err error
+		name, err = CreatePlayerName()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &Player{
+		ID:    id,
+		Name:  name,
+		Role:  role,
+		Alive: true, // new players start alive
+	}, nil
+}
+
+// --- Role enum --- //
+
+// Role represents possible player roles
 type Role int
 
 const (
@@ -44,26 +71,20 @@ func (r Role) String() string {
 	}
 }
 
-// package-level counter for generating player IDs
+// --- ID and Name Generation --- //
+
+// package-level counters for generating player IDs and names
 // using mutex to ensure thread-safety (concurrent Kafka events)
 var (
 	playerCounter int
 	nameCounter   int
-	playerMutex   sync.Mutex
+	counterMutex  sync.Mutex
 )
 
-// CreatePlayerID generates sequential player IDs: player-1, player-2, etc.
-// Thread-safe: uses mutex to protect counter from race conditions
-func CreatePlayerID() string {
-	playerMutex.Lock()         // acquire lock - blocks other goroutines
-	defer playerMutex.Unlock() // release lock when function returns
-
-	playerCounter++
-	return fmt.Sprintf("player-%d", playerCounter)
-}
+// ErrNoMoreNames is returned when all available names have been used
+var ErrNoMoreNames = errors.New("no more names available")
 
 // availableNames is a list of names to assign to players
-// unexported since it's only used internally
 var availableNames = []string{
 	"Gilbert McDonald", "Dorothy Bird",
 	"Ernest Preston", "Vincent Schultz",
@@ -73,48 +94,50 @@ var availableNames = []string{
 	"Dustin Eastman", "Willard Mendez",
 }
 
-// CreatePlayerName returns sequential names from availableNames
-// Thread-safe: shares mutex with CreatePlayerID
-func CreatePlayerName() (string, error) {
-	playerMutex.Lock()
-	defer playerMutex.Unlock()
+// CreatePlayerID generates sequential player IDs: player-1, player-2, etc.
+// Thread-safe: uses mutex to protect counter from race conditions
+func CreatePlayerID() string {
+	counterMutex.Lock()
+	defer counterMutex.Unlock()
 
-	// get current name, then increment for next call
+	playerCounter++
+	return fmt.Sprintf("player-%d", playerCounter)
+}
+
+// CreatePlayerName returns sequential names from availableNames
+// Thread-safe: uses mutex to protect counter
+// Returns ErrNoMoreNames if all names have been used
+func CreatePlayerName() (string, error) {
+	counterMutex.Lock()
+	defer counterMutex.Unlock()
+
+	if nameCounter >= len(availableNames) {
+		return "", ErrNoMoreNames
+	}
+
 	name := availableNames[nameCounter]
 	nameCounter++
-
 	return name, nil
 }
 
-// NewPlayer creates a new player with the given parameters
-// If id is empty, generates one using CreatePlayerID()
-// If name is empty, generates one using CreatePlayerName()
-// Returns ErrMaxPlayersReached if auto-generating name and limit exceeded
-func NewPlayer(id, name string, role Role) (*Player, error) {
-	if id == "" {
-		id = CreatePlayerID()
-	}
-	if name == "" {
-		var err error
-		name, err = CreatePlayerName()
-		if err != nil {
-			return nil, err // propagate the error to caller
-		}
-	}
-	return &Player{
-		ID:    id,
-		Name:  name,
-		Role:  role,
-		Alive: true, // new players start alive
-	}, nil
+// ResetPlayerCounters resets the ID and name counters to zero
+// This is intended for use in tests to ensure clean state between test runs
+func ResetPlayerCounters() {
+	counterMutex.Lock()
+	defer counterMutex.Unlock()
+
+	playerCounter = 0
+	nameCounter = 0
 }
 
-// player state helpers
+// --- Player helpers --- //
+
 func (p Player) IsAlive() bool {
 	return p.Alive
 }
 
-// player role helpers
+// --- Role helpers --- //
+
 func (r Role) IsVillagerTeam() bool {
 	return r == RoleVillager ||
 		r == RoleDoctor ||
