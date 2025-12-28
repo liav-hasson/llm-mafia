@@ -15,12 +15,19 @@ repos:
         # Add type stubs here as needed, e.g., types-requests
         additional_dependencies: []
 
+  # Golang linters
   - repo: https://github.com/golangci/golangci-lint
     rev: v1.57.2
     hooks:
       - id: golangci-lint
-        args: ["--config=.golangci.yaml"]
-        files: \.go$
+        name: golangci-lint (engine)
+        # must be ran from a directory that contains 'go.mod' file
+        entry: bash -c 'cd src/engine && golangci-lint run --config=../../.golangci.yaml'
+        files: ^src/engine/.*\.go$
+      - id: golangci-lint
+        name: golangci-lint (crd)
+        entry: bash -c 'cd src/crd && golangci-lint run --config=../../.golangci.yaml'
+        files: ^src/crd/.*\.go$
 
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
