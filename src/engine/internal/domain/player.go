@@ -153,3 +153,4 @@ func (r Role) HasNightAction() bool {
 		r == RoleDoctor ||
 		r == RoleSheriff
 }
+
