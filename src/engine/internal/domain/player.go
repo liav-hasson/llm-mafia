@@ -155,3 +155,4 @@ func (r Role) HasNightAction() bool {
 }
 
 // test
+// test2
