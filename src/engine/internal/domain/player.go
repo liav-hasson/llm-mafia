@@ -154,3 +154,4 @@ func (r Role) HasNightAction() bool {
 		r == RoleSheriff
 }
 
+// test

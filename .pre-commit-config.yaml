@@ -22,12 +22,16 @@ repos:
       - id: golangci-lint
         name: golangci-lint (engine)
         # must be ran from a directory that contains 'go.mod' file
-        entry: bash -c 'cd src/engine && golangci-lint run --config=../../.golangci.yaml'
+        entry: bash -c 'cd src/engine && golangci-lint run --config=../../.golangci.yaml ./...'
+        language: system
         files: ^src/engine/.*\.go$
+        pass_filenames: false
       - id: golangci-lint
         name: golangci-lint (crd)
-        entry: bash -c 'cd src/crd && golangci-lint run --config=../../.golangci.yaml'
+        entry: bash -c 'cd src/crd && golangci-lint run --config=../../.golangci.yaml ./...'
+        language: system
         files: ^src/crd/.*\.go$
+        pass_filenames: false
 
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
