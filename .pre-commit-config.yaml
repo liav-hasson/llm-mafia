@@ -15,19 +15,18 @@ repos:
         # Add type stubs here as needed, e.g., types-requests
         additional_dependencies: []
 
-  # Golang linters - using local hooks since module is not at repo root
-  - repo: local
+  # Golang linter - uses official repo with custom entry point for nested modules
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.62.2
     hooks:
-      - id: golangci-lint-engine
+      - id: golangci-lint
         name: golangci-lint (engine)
-        entry: bash -c 'cd src/engine && go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.2 run --config=../../.golangci.yaml ./...'
-        language: system
+        entry: bash -c 'cd src/engine && golangci-lint run ./...'
         files: ^src/engine/.*\.go$
         pass_filenames: false
-      - id: golangci-lint-crd
+      - id: golangci-lint
         name: golangci-lint (crd)
-        entry: bash -c 'cd src/crd && go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.2 run --config=../../.golangci.yaml ./...'
-        language: system
+        entry: bash -c 'cd src/crd && golangci-lint run ./...'
         files: ^src/crd/.*\.go$
         pass_filenames: false
 

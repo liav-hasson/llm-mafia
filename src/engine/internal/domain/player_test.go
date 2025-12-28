@@ -86,7 +86,7 @@ func TestResetPlayerCounters(t *testing.T) {
 	// generate some IDs and names
 	CreatePlayerID()
 	CreatePlayerID()
-	CreatePlayerName()
+	_, _ = CreatePlayerName() // ignore error for test setup
 
 	// reset
 	ResetPlayerCounters()
