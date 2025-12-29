@@ -35,6 +35,7 @@ TODO:
 ### Contribution and Development
 
 - [Pre-Commit Hooks](pre-commit.md) - Code quality and security checks
+- [Learning Resources](learning-resources.md) - Docs i used for development
 
 ```
 TODO:
