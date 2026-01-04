@@ -1,11 +1,29 @@
 package events
 
+// Event type constants - stable contract strings used for serialization routing.
+// These must match what the Python players and other services emit.
+const (
+	TypeGameStarted      = "game_started"
+	TypePhaseChanged     = "phase_changed"
+	TypePlayerEliminated = "player_eliminated"
+	TypeGameEnded        = "game_ended"
+	TypeAllChatMessage   = "all_chat"
+	TypeMafiaChatMessage = "mafia_chat"
+	TypePlayerThoughts   = "player_thoughts"
+	TypeVoteSubmitted    = "vote_submitted"
+	TypeNightAction      = "night_action"
+	TypeRoleAssigned     = "role_assigned"
+)
+
 // base data for all events, embedded in all other structs
 // struct tags allow to use Json snake_case format instead of Go PastalCase
+// BaseEvent is the common header for all events.
+// Timestamp is Unix time in milliseconds (int64).
+// Type is a stable event type string (not runtime-configurable).
 type BaseEvent struct {
 	GameID    string `json:"game_id"`
-	Timestamp int64  `json:"timestamp"`
-	Type      string `json:"type"`
+	Timestamp int64  `json:"timestamp"` // Unix ms
+	Type      string `json:"type"`      // stable contract string
 }
 
 // engine -> players events
@@ -17,6 +35,7 @@ type GameStarted struct {
 type PhaseChanged struct {
 	BaseEvent
 	Round    int    `json:"round"`
+	OldPhase string `json:"old_phase"`
 	NewPhase string `json:"new_phase"`
 }
 
@@ -28,7 +47,7 @@ type PlayerEliminated struct {
 
 type GameEnded struct {
 	BaseEvent
-	WinnerID string `json:"winner"`
+	Winner string `json:"winner"`
 }
 
 // players -> players + engine events

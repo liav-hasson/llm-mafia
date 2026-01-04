@@ -122,6 +122,7 @@ func CreatePlayerName() (string, error) {
 
 // ResetPlayerCounters resets the ID and name counters to zero
 // This is intended for use in tests to ensure clean state between test runs
+// Note: Testing utility only, not called in production code
 func ResetPlayerCounters() {
 	counterMutex.Lock()
 	defer counterMutex.Unlock()
@@ -132,12 +133,10 @@ func ResetPlayerCounters() {
 
 // --- Player helpers --- //
 
-func (p Player) IsAlive() bool {
-	return p.Alive
-}
-
 // --- Role helpers --- //
 
+// IsVillagerTeam returns true if the role is on the villager team
+// Note: Not yet called in engine commands, kept for future use
 func (r Role) IsVillagerTeam() bool {
 	return r == RoleVillager ||
 		r == RoleDoctor ||

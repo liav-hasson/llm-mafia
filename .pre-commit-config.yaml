@@ -17,7 +17,7 @@ repos:
 
   # Golang linter - uses official repo with custom entry point for nested modules
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.62.2
+    rev: v2.7.2
     hooks:
       - id: golangci-lint
         name: golangci-lint (engine)

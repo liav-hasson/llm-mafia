@@ -30,6 +30,10 @@ type GameState struct {
 	MafiaTarget   string
 	DoctorTarget  string
 	SheriffTarget string
+
+	// night action history for rule enforcement
+	PreviousDoctorTarget string // Track last save (can't save same person twice in a row)
+	SheriffUsedBullet    bool   // Sheriff only has one bullet
 }
 
 // set winner type
@@ -63,6 +67,7 @@ func (g *GameState) GetPlayer(id string) *Player {
 }
 
 // GetAlivePlayers returns a slice of all players who are still alive
+// Used internally by ShufflePlayerOrder()
 func (g *GameState) GetAlivePlayers() []*Player {
 	// create empty slice to collect alive players
 	// using var instead of make() — starts as nil, append works on nil slices
@@ -82,20 +87,6 @@ func (g *GameState) GetAlivePlayers() []*Player {
 // GetPlayerCount returns the total number of players in the game
 func (g *GameState) GetPlayerCount() int {
 	return len(g.Players)
-}
-
-// GetPlayersByRole returns all players with the specified role
-// Includes both alive and dead players
-func (g *GameState) GetPlayersByRole(role Role) []*Player {
-	var players []*Player
-
-	for _, player := range g.Players {
-		if player.Role == role {
-			players = append(players, player)
-		}
-	}
-
-	return players
 }
 
 // IsGameOver checks if win conditions are met and updates the Winner field
@@ -216,14 +207,19 @@ func (g *GameState) EliminatePlayer(id string) *Player {
 
 // ResetPhaseData clears all votes and night actions
 // Called between phases to start fresh
+// Preserves PreviousDoctorTarget for rule enforcement
 func (g *GameState) ResetPhaseData() {
 	// clear day votes — create new empty map
 	g.Votes = make(map[string]string)
+
+	// save doctor target before clearing (for consecutive save rule)
+	g.PreviousDoctorTarget = g.DoctorTarget
 
 	// clear night actions — reset to zero value (empty string)
 	g.MafiaTarget = ""
 	g.DoctorTarget = ""
 	g.SheriffTarget = ""
+	// Note: SheriffUsedBullet persists across rounds (one bullet per game)
 }
 
 // RegisterVote records a day vote from voter to target
@@ -259,7 +255,10 @@ func (g *GameState) RegisterVote(voterID, targetID string) bool {
 //   - role doesn't have a night action
 //   - action already set for this role (no changing actions)
 //   - target doesn't exist or is dead
-func (g *GameState) SetNightAction(role Role, targetID string) bool {
+//   - doctor tries to save same person as last round
+//   - sheriff already used their bullet
+//   - mafia/sheriff tries to target themselves (doctor CAN self-save)
+func (g *GameState) SetNightAction(role Role, actorID, targetID string) bool {
 	// validate role has night action
 	if !role.HasNightAction() {
 		return false
@@ -278,23 +277,79 @@ func (g *GameState) SetNightAction(role Role, targetID string) bool {
 		if g.MafiaTarget != "" {
 			return false // already set
 		}
+		// Mafia cannot target themselves
+		if actorID == targetID {
+			return false
+		}
 		g.MafiaTarget = targetID
 
 	case RoleDoctor:
 		if g.DoctorTarget != "" {
 			return false // already set
 		}
+		// Doctor cannot save the same person two rounds in a row
+		if g.PreviousDoctorTarget == targetID {
+			return false
+		}
+		// Doctor CAN save themselves
 		g.DoctorTarget = targetID
 
 	case RoleSheriff:
 		if g.SheriffTarget != "" {
 			return false // already set
 		}
+		// Sheriff only has one bullet
+		if g.SheriffUsedBullet {
+			return false
+		}
+		// Sheriff cannot investigate themselves
+		if actorID == targetID {
+			return false
+		}
 		g.SheriffTarget = targetID
+		g.SheriffUsedBullet = true // Mark bullet as used
 
 	default:
 		return false // unknown role with night action
 	}
 
 	return true
+}
+
+// ResolveNightActions processes night actions and returns eliminated player ID
+// Returns empty string if no one was eliminated
+// Logic:
+//   - Mafia kills their target
+//   - Doctor saves their target
+//   - If saved target == killed target, no elimination
+func (g *GameState) ResolveNightActions() string {
+	// If no mafia target, no one dies
+	if g.MafiaTarget == "" {
+		return ""
+	}
+
+	// If doctor saved the mafia target, no one dies
+	if g.DoctorTarget == g.MafiaTarget {
+		return ""
+	}
+
+	// Mafia target was not saved — they die
+	return g.MafiaTarget
+}
+
+// ResolveVotingPhase tallies votes and returns eliminated player ID
+// Returns empty string if no one was eliminated (tie or no votes)
+func (g *GameState) ResolveVotingPhase() string {
+	// If no votes, no one is eliminated
+	if len(g.Votes) == 0 {
+		return ""
+	}
+
+	// Use existing voting logic
+	winner, hasWinner := GetVoteWinner(g.Votes)
+	if !hasWinner {
+		return "" // tie — no elimination
+	}
+
+	return winner
 }

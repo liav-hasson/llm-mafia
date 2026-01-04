@@ -2,6 +2,12 @@ package domain
 
 import "testing"
 
+// Tests use local min/max values to remain independent from runtime config.
+const (
+	testMinPlayers = 6
+	testMaxPlayers = 12
+)
+
 // TestCanAddPlayer tests the player limit check
 func TestCanAddPlayer(t *testing.T) {
 	tests := []struct {
@@ -11,16 +17,16 @@ func TestCanAddPlayer(t *testing.T) {
 	}{
 		{"zero players can add", 0, true},
 		{"one player can add", 1, true},
-		{"at min-1 can add", MinPlayers - 1, true},
-		{"at min can add", MinPlayers, true},
-		{"at max-1 can add", MaxPlayers - 1, true},
-		{"at max cannot add", MaxPlayers, false},
-		{"over max cannot add", MaxPlayers + 1, false},
+		{"at min-1 can add", testMinPlayers - 1, true},
+		{"at min can add", testMinPlayers, true},
+		{"at max-1 can add", testMaxPlayers - 1, true},
+		{"at max cannot add", testMaxPlayers, false},
+		{"over max cannot add", testMaxPlayers + 1, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := CanAddPlayer(tt.playerCount)
+			result := CanAddPlayer(tt.playerCount, testMaxPlayers)
 			if result != tt.expected {
 				t.Errorf("CanAddPlayer(%d): got %v, expected %v",
 					tt.playerCount, result, tt.expected)
@@ -38,16 +44,16 @@ func TestCanStartGame(t *testing.T) {
 	}{
 		{"zero players cannot start", 0, false},
 		{"one player cannot start", 1, false},
-		{"min-1 cannot start", MinPlayers - 1, false},
-		{"at min can start", MinPlayers, true},
-		{"between min and max can start", (MinPlayers + MaxPlayers) / 2, true},
-		{"at max can start", MaxPlayers, true},
-		{"over max cannot start", MaxPlayers + 1, false},
+		{"min-1 cannot start", testMinPlayers - 1, false},
+		{"at min can start", testMinPlayers, true},
+		{"between min and max can start", (testMinPlayers + testMaxPlayers) / 2, true},
+		{"at max can start", testMaxPlayers, true},
+		{"over max cannot start", testMaxPlayers + 1, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := CanStartGame(tt.playerCount)
+			result := CanStartGame(tt.playerCount, testMinPlayers, testMaxPlayers)
 			if result != tt.expected {
 				t.Errorf("CanStartGame(%d): got %v, expected %v",
 					tt.playerCount, result, tt.expected)
@@ -57,16 +63,16 @@ func TestCanStartGame(t *testing.T) {
 }
 
 // TestMinMaxPlayersConstants verifies the game constants are sensible
-// using constants
+// using the local test constants
 func TestMinMaxPlayersConstants(t *testing.T) {
-	if MinPlayers < 6 {
-		t.Errorf("MinPlayers should be at least 4 for a fun game, got %d", MinPlayers)
+	if testMinPlayers < 6 {
+		t.Errorf("testMinPlayers should be at least 4 for a fun game, got %d", testMinPlayers)
 	}
-	if MaxPlayers < MinPlayers {
-		t.Errorf("MaxPlayers (%d) should be >= MinPlayers (%d)", MaxPlayers, MinPlayers)
+	if testMaxPlayers < testMinPlayers {
+		t.Errorf("testMaxPlayers (%d) should be >= testMinPlayers (%d)", testMaxPlayers, testMinPlayers)
 	}
-	if MaxPlayers > 12 {
-		t.Errorf("MaxPlayers (%d) seems too high, might cause issues", MaxPlayers)
+	if testMaxPlayers > 12 {
+		t.Errorf("testMaxPlayers (%d) seems too high, might cause issues", testMaxPlayers)
 	}
 }
 

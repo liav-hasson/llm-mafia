@@ -281,25 +281,3 @@ func TestRoleHasNightAction(t *testing.T) {
 }
 
 // --- Player Helper Tests --- //
-
-func TestPlayerIsAlive(t *testing.T) {
-	tests := []struct {
-		name     string
-		alive    bool
-		expected bool
-	}{
-		{name: "alive player returns true", alive: true, expected: true},
-		{name: "dead player returns false", alive: false, expected: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			player := &Player{ID: "test", Name: "Test", Alive: tt.alive}
-
-			result := player.IsAlive()
-			if result != tt.expected {
-				t.Errorf("got %v, expected %v", result, tt.expected)
-			}
-		})
-	}
-}

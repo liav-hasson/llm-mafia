@@ -1,3 +1,5 @@
+version: 2
+
 run:
   timeout: 3m
   tests: True
@@ -9,16 +11,20 @@ linters:
     - staticcheck
     - ineffassign
     - unused
-    - gofmt
-    - goimports
     - gosec
   disable:
     - gocyclo
     - funlen
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
 
 output:
-  formats: colored-line-number
+  formats:
+    colored-line-number: {}

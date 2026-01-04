@@ -163,28 +163,6 @@ func TestGetAlivePlayers_EmptyGame(t *testing.T) {
 
 // --- GetPlayersByRole Tests ---
 
-func TestGetPlayersByRole(t *testing.T) {
-	game := NewGameState()
-	game.AddPlayer(&Player{ID: "1", Name: "V1", Role: RoleVillager, Alive: true})
-	game.AddPlayer(&Player{ID: "2", Name: "M1", Role: RoleMafia, Alive: true})
-	game.AddPlayer(&Player{ID: "3", Name: "V2", Role: RoleVillager, Alive: true})
-	game.AddPlayer(&Player{ID: "4", Name: "M2", Role: RoleMafia, Alive: false}) // dead mafia counts too
-
-	villagers := game.GetPlayersByRole(RoleVillager)
-	mafia := game.GetPlayersByRole(RoleMafia)
-	doctors := game.GetPlayersByRole(RoleDoctor)
-
-	if len(villagers) != 2 {
-		t.Errorf("villager count: got %d, expected 2", len(villagers))
-	}
-	if len(mafia) != 2 {
-		t.Errorf("mafia count: got %d, expected 2", len(mafia))
-	}
-	if len(doctors) != 0 {
-		t.Errorf("doctor count: got %d, expected 0", len(doctors))
-	}
-}
-
 // --- EliminatePlayer Tests ---
 
 func TestEliminatePlayer(t *testing.T) {
@@ -286,9 +264,10 @@ func TestRegisterVote_DuplicateVote(t *testing.T) {
 
 func TestSetNightAction_Mafia(t *testing.T) {
 	game := NewGameState()
+	game.AddPlayer(&Player{ID: "mafia-1", Name: "Mafia", Role: RoleMafia, Alive: true})
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: true})
 
-	result := game.SetNightAction(RoleMafia, "target")
+	result := game.SetNightAction(RoleMafia, "mafia-1", "target")
 
 	if !result {
 		t.Error("SetNightAction should return true for valid action")
@@ -302,7 +281,7 @@ func TestSetNightAction_Doctor(t *testing.T) {
 	game := NewGameState()
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: true})
 
-	result := game.SetNightAction(RoleDoctor, "target")
+	result := game.SetNightAction(RoleDoctor, "target", "target")
 
 	if !result {
 		t.Error("SetNightAction should return true")
@@ -314,9 +293,10 @@ func TestSetNightAction_Doctor(t *testing.T) {
 
 func TestSetNightAction_Sheriff(t *testing.T) {
 	game := NewGameState()
+	game.AddPlayer(&Player{ID: "sheriff-1", Name: "Sheriff", Role: RoleSheriff, Alive: true})
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: true})
 
-	result := game.SetNightAction(RoleSheriff, "target")
+	result := game.SetNightAction(RoleSheriff, "sheriff-1", "target")
 
 	if !result {
 		t.Error("SetNightAction should return true")
@@ -328,9 +308,10 @@ func TestSetNightAction_Sheriff(t *testing.T) {
 
 func TestSetNightAction_VillagerCannot(t *testing.T) {
 	game := NewGameState()
+	game.AddPlayer(&Player{ID: "villager-1", Name: "Villager", Role: RoleVillager, Alive: true})
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: true})
 
-	result := game.SetNightAction(RoleVillager, "target")
+	result := game.SetNightAction(RoleVillager, "villager-1", "target")
 
 	if result {
 		t.Error("villager should not have night action")
@@ -340,15 +321,17 @@ func TestSetNightAction_VillagerCannot(t *testing.T) {
 func TestSetNightAction_AlreadySet(t *testing.T) {
 	game := NewGameState()
 	game.AddPlayer(&Player{ID: "target1", Name: "Target1", Alive: true})
+	game.AddPlayer(&Player{ID: "mafia-1", Name: "Mafia1", Role: RoleMafia, Alive: true})
+	game.AddPlayer(&Player{ID: "mafia-2", Name: "Mafia2", Role: RoleMafia, Alive: true})
 	game.AddPlayer(&Player{ID: "target2", Name: "Target2", Alive: true})
 
-	game.SetNightAction(RoleMafia, "target1")
-	result := game.SetNightAction(RoleMafia, "target2")
+	game.SetNightAction(RoleMafia, "mafia-1", "target2")
+	result := game.SetNightAction(RoleMafia, "mafia-2", "target1")
 
 	if result {
 		t.Error("should not be able to change night action")
 	}
-	if game.MafiaTarget != "target1" {
+	if game.MafiaTarget != "target2" {
 		t.Error("original target should be preserved")
 	}
 }
@@ -362,9 +345,9 @@ func TestResetPhaseData(t *testing.T) {
 
 	// Set some data
 	game.RegisterVote("voter", "target")
-	game.SetNightAction(RoleMafia, "target")
-	game.SetNightAction(RoleDoctor, "target")
-	game.SetNightAction(RoleSheriff, "target")
+	game.SetNightAction(RoleMafia, "voter", "target")
+	game.SetNightAction(RoleDoctor, "voter", "target")
+	game.SetNightAction(RoleSheriff, "voter", "target")
 
 	// Reset
 	game.ResetPhaseData()
@@ -448,9 +431,15 @@ func TestAssignRolesToPlayers(t *testing.T) {
 	}
 
 	for role, count := range expectedResult {
-		players := game.GetPlayersByRole(role)
-		if len(players) != count {
-			t.Errorf("expected %d %s , got %d", count, role, len(players))
+		// Count players with this role manually
+		found := 0
+		for _, player := range game.Players {
+			if player.Role == role {
+				found++
+			}
+		}
+		if found != count {
+			t.Errorf("expected %d %s , got %d", count, role, found)
 		}
 	}
 }

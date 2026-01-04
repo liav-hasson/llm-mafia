@@ -67,9 +67,3 @@ func GetVoteWinner(votes map[string]string) (string, bool) {
 	// return first value
 	return highestVotedPlayer[0], true
 }
-
-// check if there is a tie
-func IsTie(votes map[string]string) bool {
-	highestVotedPlayer := getTopVoted(votes)
-	return len(highestVotedPlayer) > 1
-}

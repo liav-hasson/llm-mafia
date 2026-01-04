@@ -2,21 +2,17 @@
 
 package domain
 
-// set game constants
-// available names in 'player.go'
-const (
-	MinPlayers = 6
-	MaxPlayers = 12
-)
+// Rule helpers are pure functions. Minimum/maximum player limits are provided
+// by the caller (engine) so they can be configured at runtime.
 
-func CanAddPlayer(currentPlayerCount int) bool {
-	// true if current is smaller then max
-	return currentPlayerCount < MaxPlayers
+// CanAddPlayer returns true if we can add a player given the configured max.
+func CanAddPlayer(currentPlayerCount, maxPlayers int) bool {
+	return currentPlayerCount < maxPlayers
 }
 
-func CanStartGame(currentPlayerCount int) bool {
-	// true if current is smaller or equal to max AND bigger or equal to min
-	return currentPlayerCount <= MaxPlayers && currentPlayerCount >= MinPlayers
+// CanStartGame returns true if currentPlayerCount is between min and max inclusive.
+func CanStartGame(currentPlayerCount, minPlayers, maxPlayers int) bool {
+	return currentPlayerCount <= maxPlayers && currentPlayerCount >= minPlayers
 }
 
 // mafia - villager ratio is 1/3, and always 1 doctor and 1 sheriff
