@@ -16,6 +16,10 @@ import (
 )
 
 func main() {
+	// -----------------
+	// Initialization
+	// -----------------
+
 	// Load configuration from environment variables
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -33,10 +37,12 @@ func main() {
 	log.Printf("Kafka producer created for topic: %s", cfg.EngineEventsTopic)
 
 	// Create Kafka consumer for receiving player actions
-	// Consumer needs topics as a slice
 	consumer, err := kafka.NewKafkaConsumer(
 		cfg.KafkaBrokers,
-		[]string{cfg.PlayerActionsTopic},
+		// kafka-go limitation: a consumer can only subscribe to a single topic
+		// alternative in kafka-go is to use 'GroupTopics' (read more about this)
+		// a good practice IS to use a single costumer for a single topic anyway
+		cfg.PlayerActionsTopic,
 		cfg.KafkaGroupID,
 	)
 	if err != nil {
@@ -50,7 +56,7 @@ func main() {
 	// Initialize game state with configuration
 	// Start in Waiting phase (players can join)
 	gameState := &domain.GameState{
-		ID:      fmt.Sprintf("game-%d", time.Now().Unix()),
+		ID:      domain.CreateGameID(cfg.GameIDPrefix),
 		Phase:   domain.PhaseWaiting,
 		Round:   0,
 		Winner:  domain.WinnerNone,
@@ -60,7 +66,12 @@ func main() {
 	log.Printf("Game state initialized: id=%s, phase=%s", gameState.ID, gameState.Phase)
 
 	// Create the game engine
-	eng, err := engine.NewEngine(gameState, producer)
+	// Note: We inject the producer but NOT the consumer.
+	// The Engine is a reactive component that acts when 'HandleMessage' is called.
+	// This "Push" architecture decouples the engine from the transport layer (Kafka),
+	// making it easier to test and swap implementations.
+	eng, err := engine.NewEngine(gameState, producer, cfg)
+	// catch error and close interfaces if the engine creation fails
 	if err != nil {
 		if closeErr := consumer.Close(); closeErr != nil {
 			log.Printf("Error closing consumer: %v", closeErr)
@@ -72,9 +83,33 @@ func main() {
 	}
 	log.Println("Game engine created")
 
+	// -----------------
+	// Start engine
+	// -----------------
+
 	// Start the engine event loop
 	eng.Start()
 	log.Println("Engine started")
+
+	// -----------------
+	// Start Game
+	// -----------------
+	// populate the game with players based on configuration (Declarative approach).
+	// This works for both for mock and Kubernetes Operator mode.
+	// In K8s, the Operator will see this state and spin up the corresponding pods.
+	log.Printf("Bootstrap: Pre-populating game with %d players...", cfg.GameMinPlayers)
+	for i := 0; i < cfg.GameMinPlayers; i++ {
+		if err := eng.AddPlayer(); err != nil {
+			log.Fatalf("Bootstrap Failed: could not add player %d: %v", i, err)
+		}
+	}
+	log.Printf("Bootstrap: Added %d players.", cfg.GameMinPlayers)
+
+	log.Println("Bootstrap: Starting game...")
+	if err := eng.StartGame(); err != nil {
+		log.Fatalf("Bootstrap Failed: could not start game: %v", err)
+	}
+	log.Println("Bootstrap: Game started successfully! Check Kafka topics for events.")
 
 	// Create context for coordinating shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -89,6 +124,10 @@ func main() {
 			cancel() // Signal shutdown on consumer error
 		}
 	}()
+
+	// -----------------
+	// End game
+	// -----------------
 
 	// Wait for termination signal
 	sigCh := make(chan os.Signal, 1)

@@ -8,21 +8,26 @@ import (
 )
 
 func TestGetPhaseTimeout(t *testing.T) {
+	// Test timeout values
+	nightTimeout := 2 * time.Minute
+	dayTimeout := 5 * time.Minute
+	votingTimeout := 1 * time.Minute
+
 	tests := []struct {
 		name     string
 		phase    domain.Phase
 		expected time.Duration
 	}{
-		{"Night phase", domain.PhaseNight, 2 * time.Minute},
-		{"Day phase", domain.PhaseDay, 5 * time.Minute},
-		{"Voting phase", domain.PhaseVoting, 1 * time.Minute},
+		{"Night phase", domain.PhaseNight, nightTimeout},
+		{"Day phase", domain.PhaseDay, dayTimeout},
+		{"Voting phase", domain.PhaseVoting, votingTimeout},
 		{"Waiting phase", domain.PhaseWaiting, 0},
 		{"Ended phase", domain.PhaseEnded, 0},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := GetPhaseTimeout(tt.phase)
+			result := GetPhaseTimeout(tt.phase, nightTimeout, dayTimeout, votingTimeout)
 			if result != tt.expected {
 				t.Errorf("got %v, want %v", result, tt.expected)
 			}

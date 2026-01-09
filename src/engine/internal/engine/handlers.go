@@ -7,7 +7,7 @@ import (
 	"mafia-engine/internal/events"
 )
 
-// HandleEvent is the dispatcher that converts external events into internal commands.
+// HandleEvent converts external events into internal commands.
 // It performs type assertion on the event and creates the appropriate Command.
 // Commands are sent to cmdCh for execution in the run loop.
 //

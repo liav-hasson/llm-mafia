@@ -9,9 +9,10 @@ import (
 
 // AddPlayerCommand adds a new player to the game before it starts.
 // This can only be called during the waiting phase.
+// The player (with id and name already assigned) must be provided.
 type AddPlayerCommand struct {
-	PlayerName string // Optional - will auto-generate if empty
-	MaxPlayers int    // Maximum allowed players
+	Player     *domain.Player // Player to add (id and name already set)
+	MaxPlayers int            // Maximum allowed players
 }
 
 func (c *AddPlayerCommand) Apply(state *domain.GameState) ([]Effect, error) {
@@ -26,15 +27,13 @@ func (c *AddPlayerCommand) Apply(state *domain.GameState) ([]Effect, error) {
 		return nil, fmt.Errorf("cannot add player: max players (%d) reached", c.MaxPlayers)
 	}
 
-	// Create new player using domain helper
-	// NewPlayer will auto-generate ID and name if needed
-	player, err := domain.NewPlayer("", c.PlayerName, domain.RoleUnknown)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create player: %w", err)
+	// Validation 3: Player must be provided
+	if c.Player == nil {
+		return nil, fmt.Errorf("player must not be nil")
 	}
 
 	// Add player to state using domain helper
-	addedPlayer := state.AddPlayer(player)
+	addedPlayer := state.AddPlayer(c.Player)
 	if addedPlayer == nil {
 		return nil, fmt.Errorf("failed to add player: duplicate ID")
 	}

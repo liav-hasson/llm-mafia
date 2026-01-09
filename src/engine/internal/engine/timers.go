@@ -84,15 +84,15 @@ func (tm *TimerManager) Shutdown() {
 }
 
 // GetPhaseTimeout returns the timeout duration for a given phase.
-// These are the default durations - can be made configurable later.
-func GetPhaseTimeout(phase domain.Phase) time.Duration {
+// Timeout values are provided from the engine's configuration.
+func GetPhaseTimeout(phase domain.Phase, nightTimeout, dayTimeout, votingTimeout time.Duration) time.Duration {
 	switch phase {
 	case domain.PhaseNight:
-		return 2 * time.Minute // Mafia coordination time
+		return nightTimeout
 	case domain.PhaseDay:
-		return 5 * time.Minute // Discussion time
+		return dayTimeout
 	case domain.PhaseVoting:
-		return 1 * time.Minute // Voting deadline
+		return votingTimeout
 	default:
 		return 0 // No timeout for Waiting/Ended phases
 	}

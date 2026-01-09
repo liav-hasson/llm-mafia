@@ -39,7 +39,7 @@ func (e *Engine) run() {
 				e.timers.CancelPhaseTimer()
 
 				// Schedule timeout for the new phase (if applicable)
-				timeout := GetPhaseTimeout(e.state.Phase)
+				timeout := GetPhaseTimeout(e.state.Phase, e.cfg.PhaseNightTimeout, e.cfg.PhaseDayTimeout, e.cfg.PhaseVotingTimeout)
 				if timeout > 0 {
 					nextPhase := GetNextPhase(e.state.Phase)
 					e.timers.SchedulePhaseTimeout(
@@ -55,7 +55,7 @@ func (e *Engine) run() {
 
 			// Also schedule timer when game starts
 			if _, isStartGame := cmd.(*StartGameCommand); isStartGame {
-				timeout := GetPhaseTimeout(e.state.Phase)
+				timeout := GetPhaseTimeout(e.state.Phase, e.cfg.PhaseNightTimeout, e.cfg.PhaseDayTimeout, e.cfg.PhaseVotingTimeout)
 				if timeout > 0 {
 					nextPhase := GetNextPhase(e.state.Phase)
 					e.timers.SchedulePhaseTimeout(

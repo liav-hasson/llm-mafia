@@ -7,6 +7,7 @@ toolchain go1.24.11
 require github.com/xyproto/randomstring v1.2.0
 
 require (
+	github.com/caarlos0/env/v11 v11.3.1 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/segmentio/kafka-go v0.4.49 // indirect

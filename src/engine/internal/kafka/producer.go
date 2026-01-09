@@ -28,10 +28,15 @@ type KafkaProducer struct {
 // (e.g., same game ID) go to the same partition, preserving event order.
 func NewKafkaProducer(brokers []string, clientID string) (*KafkaProducer, error) {
 	writer := &kafka.Writer{
-		Addr:     kafka.TCP(brokers...),
-		Balancer: &kafka.Hash{}, // Key-based partitioning for event ordering
+		Addr: kafka.TCP(brokers...),
 
-		// RequireOne waits for leader acknowledgment (durability vs performance)
+		// Key-based partitioning for event ordering
+		// good when concurrent games are running so messages
+		// go to the same partition (future proof, good practice)
+		Balancer: &kafka.Hash{},
+
+		// RequireOne waits only for leader ack (durability vs performance)
+		// middle zone between 'RequireNone' and 'RequireAll'
 		RequiredAcks: kafka.RequireOne,
 
 		// Writer will handle transient failures with retries
@@ -39,6 +44,7 @@ func NewKafkaProducer(brokers []string, clientID string) (*KafkaProducer, error)
 		MaxAttempts: 3,
 
 		// No specific Topic - set per message for flexibility
+		// Topic string
 	}
 
 	return &KafkaProducer{writer: writer}, nil

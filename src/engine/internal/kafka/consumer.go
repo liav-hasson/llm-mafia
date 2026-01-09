@@ -24,18 +24,18 @@ type KafkaConsumer struct {
 	reader *kafka.Reader
 }
 
-// NewKafkaConsumer creates a new Kafka consumer subscribed to the given topics.
+// NewKafkaConsumer creates a new Kafka consumer subscribed to the given topic.
 // It uses consumer groups for scalability and automatic partition assignment.
 // Multiple consumers with the same groupID will share the work.
-func NewKafkaConsumer(brokers []string, topics []string, groupID string) (*KafkaConsumer, error) {
-	if len(topics) == 0 {
-		return nil, fmt.Errorf("at least one topic is required")
+func NewKafkaConsumer(brokers []string, topic string, groupID string) (*KafkaConsumer, error) {
+	if topic == "" {
+		return nil, fmt.Errorf("topic is required")
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: brokers,
 		GroupID: groupID,
-		Topic:   topics[0], // kafka-go Reader supports only one topic
+		Topic:   topic,
 
 		// Start reading from the earliest unread message
 		// If consumer group has existing offset, it will resume from there

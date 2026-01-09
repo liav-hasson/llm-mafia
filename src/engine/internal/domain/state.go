@@ -3,6 +3,7 @@
 package domain
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/xyproto/randomstring"
@@ -129,10 +130,10 @@ func (g *GameState) IsGameOver() bool {
 
 // --- mutating game state --- //
 
-// initialize new game state
-func NewGameState() *GameState {
+// NewGameState initializes a new game state with the given ID prefix.
+func NewGameState(idPrefix string) *GameState {
 	return &GameState{
-		ID:     CreateGameID(),
+		ID:     CreateGameID(idPrefix),
 		Round:  1,
 		Phase:  PhaseWaiting,
 		Winner: WinnerNone,
@@ -143,10 +144,13 @@ func NewGameState() *GameState {
 	}
 }
 
-// create random game ID
-func CreateGameID() string {
+// CreateGameID creates a random game ID with the given prefix.
+// Format: {prefix}-{random-string}
+// Example: "game-a3k9m" or "dev-x7p2q"
+func CreateGameID(prefix string) string {
 	const idlength = 5
-	return randomstring.String(idlength)
+	randomSuffix := randomstring.String(idlength)
+	return fmt.Sprintf("%s-%s", prefix, randomSuffix)
 }
 
 func (g *GameState) ShufflePlayerOrder() []*Player {

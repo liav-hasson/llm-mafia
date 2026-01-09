@@ -13,7 +13,8 @@ func TestAddPlayerCommand_Success(t *testing.T) {
 		Players: make(map[string]*domain.Player),
 	}
 
-	cmd := &AddPlayerCommand{PlayerName: "Alice", MaxPlayers: 10}
+	player, _ := domain.NewPlayer("player-1", "Alice", domain.RoleUnknown)
+	cmd := &AddPlayerCommand{Player: player, MaxPlayers: 10}
 	effects, err := cmd.Apply(state)
 
 	if err != nil {
@@ -33,7 +34,8 @@ func TestAddPlayerCommand_WrongPhase(t *testing.T) {
 		Players: make(map[string]*domain.Player),
 	}
 
-	cmd := &AddPlayerCommand{PlayerName: "Bob", MaxPlayers: 10}
+	player, _ := domain.NewPlayer("player-1", "Bob", domain.RoleUnknown)
+	cmd := &AddPlayerCommand{Player: player, MaxPlayers: 10}
 	_, err := cmd.Apply(state)
 
 	if err == nil {
@@ -53,7 +55,7 @@ func TestStartGameCommand_Success(t *testing.T) {
 
 	// Add 6 players
 	for i := 0; i < 6; i++ {
-		player, _ := domain.NewPlayer("", "", domain.RoleUnknown)
+		player, _ := domain.NewPlayer(domain.CreatePlayerID(), "TestPlayer", domain.RoleUnknown)
 		state.AddPlayer(player)
 	}
 

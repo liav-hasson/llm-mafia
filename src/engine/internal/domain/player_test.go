@@ -7,8 +7,8 @@ import (
 // --- ID Generation Tests --- //
 
 func TestCreatePlayerID(t *testing.T) {
-	// reset counters before test to ensure clean state
-	ResetPlayerCounters()
+	// reset counter before test to ensure clean state
+	ResetPlayerCounter()
 
 	tests := []struct {
 		name     string
@@ -29,77 +29,18 @@ func TestCreatePlayerID(t *testing.T) {
 	}
 }
 
-// --- Name Generation Tests --- //
-
-func TestCreatePlayerName(t *testing.T) {
-	// reset counters before test to ensure clean state
-	ResetPlayerCounters()
-
-	tests := []struct {
-		name         string
-		expectedName string
-		expectedErr  error
-	}{
-		{name: "first name", expectedName: "Gilbert McDonald", expectedErr: nil},
-		{name: "second name", expectedName: "Dorothy Bird", expectedErr: nil},
-		{name: "third name", expectedName: "Ernest Preston", expectedErr: nil},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotName, err := CreatePlayerName()
-
-			if gotName != tt.expectedName {
-				t.Errorf("got name %q, expected %q", gotName, tt.expectedName)
-			}
-
-			if err != tt.expectedErr {
-				t.Errorf("got error %v, expected %v", err, tt.expectedErr)
-			}
-		})
-	}
-}
-
-func TestCreatePlayerName_ExhaustsNames(t *testing.T) {
-	// reset and use all names
-	ResetPlayerCounters()
-
-	// use all 12 available names
-	for i := 0; i < 12; i++ {
-		_, err := CreatePlayerName()
-		if err != nil {
-			t.Fatalf("unexpected error on name %d: %v", i+1, err)
-		}
-	}
-
-	// 13th call should return error
-	name, err := CreatePlayerName()
-	if err != ErrNoMoreNames {
-		t.Errorf("expected ErrNoMoreNames, got %v", err)
-	}
-	if name != "" {
-		t.Errorf("expected empty name, got %q", name)
-	}
-}
-
-func TestResetPlayerCounters(t *testing.T) {
-	// generate some IDs and names
+func TestResetPlayerCounter(t *testing.T) {
+	// generate some IDs
 	CreatePlayerID()
 	CreatePlayerID()
-	_, _ = CreatePlayerName() // ignore error for test setup
 
 	// reset
-	ResetPlayerCounters()
+	ResetPlayerCounter()
 
 	// should start fresh
 	id := CreatePlayerID()
 	if id != "player-1" {
 		t.Errorf("after reset, got %s, expected player-1", id)
-	}
-
-	name, _ := CreatePlayerName()
-	if name != "Gilbert McDonald" {
-		t.Errorf("after reset, got %s, expected Gilbert McDonald", name)
 	}
 }
 
@@ -158,31 +99,17 @@ func TestNewPlayer(t *testing.T) {
 	}
 }
 
-func TestNewPlayer_AutoGeneratesID(t *testing.T) {
-	ResetPlayerCounters()
-
-	// empty ID should auto-generate
-	player, err := NewPlayer("", "Test Name", RoleVillager)
-
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if player.ID != "player-1" {
-		t.Errorf("got ID %s, expected player-1", player.ID)
+func TestNewPlayer_RequiresID(t *testing.T) {
+	_, err := NewPlayer("", "Test Name", RoleVillager)
+	if err == nil {
+		t.Error("expected error when ID is empty")
 	}
 }
 
-func TestNewPlayer_AutoGeneratesName(t *testing.T) {
-	ResetPlayerCounters()
-
-	// empty name should auto-generate
-	player, err := NewPlayer("test-id", "", RoleVillager)
-
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if player.Name != "Gilbert McDonald" {
-		t.Errorf("got name %s, expected Gilbert McDonald", player.Name)
+func TestNewPlayer_RequiresName(t *testing.T) {
+	_, err := NewPlayer("test-id", "", RoleVillager)
+	if err == nil {
+		t.Error("expected error when name is empty")
 	}
 }
 
@@ -190,19 +117,20 @@ func TestNewPlayer_AutoGeneratesName(t *testing.T) {
 
 func TestRoleString(t *testing.T) {
 	tests := []struct {
+		name     string
 		role     Role
 		expected string
 	}{
-		{RoleUnknown, "unknown"},
-		{RoleVillager, "villager"},
-		{RoleMafia, "mafia"},
-		{RoleDoctor, "doctor"},
-		{RoleSheriff, "sheriff"},
-		{Role(99), "invalid"}, // unknown role value
+		{name: "unknown", role: RoleUnknown, expected: "unknown"},
+		{name: "villager", role: RoleVillager, expected: "villager"},
+		{name: "mafia", role: RoleMafia, expected: "mafia"},
+		{name: "doctor", role: RoleDoctor, expected: "doctor"},
+		{name: "sheriff", role: RoleSheriff, expected: "sheriff"},
+		{name: "invalid", role: Role(999), expected: "invalid"},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			result := tt.role.String()
 			if result != tt.expected {
 				t.Errorf("got %s, expected %s", result, tt.expected)
@@ -213,22 +141,22 @@ func TestRoleString(t *testing.T) {
 
 func TestRoleIsVillagerTeam(t *testing.T) {
 	tests := []struct {
+		name     string
 		role     Role
 		expected bool
 	}{
-		{RoleVillager, true},
-		{RoleDoctor, true},
-		{RoleSheriff, true},
-		{RoleMafia, false},
-		{RoleUnknown, false},
+		{name: "villager", role: RoleVillager, expected: true},
+		{name: "doctor", role: RoleDoctor, expected: true},
+		{name: "sheriff", role: RoleSheriff, expected: true},
+		{name: "mafia", role: RoleMafia, expected: false},
+		{name: "unknown", role: RoleUnknown, expected: false},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.role.String(), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			result := tt.role.IsVillagerTeam()
 			if result != tt.expected {
-				t.Errorf("%s.IsVillagerTeam(): got %v, expected %v",
-					tt.role, result, tt.expected)
+				t.Errorf("got %v, expected %v", result, tt.expected)
 			}
 		})
 	}
@@ -236,22 +164,22 @@ func TestRoleIsVillagerTeam(t *testing.T) {
 
 func TestRoleIsMafiaTeam(t *testing.T) {
 	tests := []struct {
+		name     string
 		role     Role
 		expected bool
 	}{
-		{RoleMafia, true},
-		{RoleVillager, false},
-		{RoleDoctor, false},
-		{RoleSheriff, false},
-		{RoleUnknown, false},
+		{name: "mafia", role: RoleMafia, expected: true},
+		{name: "villager", role: RoleVillager, expected: false},
+		{name: "doctor", role: RoleDoctor, expected: false},
+		{name: "sheriff", role: RoleSheriff, expected: false},
+		{name: "unknown", role: RoleUnknown, expected: false},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.role.String(), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			result := tt.role.IsMafiaTeam()
 			if result != tt.expected {
-				t.Errorf("%s.IsMafiaTeam(): got %v, expected %v",
-					tt.role, result, tt.expected)
+				t.Errorf("got %v, expected %v", result, tt.expected)
 			}
 		})
 	}
@@ -259,25 +187,23 @@ func TestRoleIsMafiaTeam(t *testing.T) {
 
 func TestRoleHasNightAction(t *testing.T) {
 	tests := []struct {
+		name     string
 		role     Role
 		expected bool
 	}{
-		{RoleMafia, true},
-		{RoleDoctor, true},
-		{RoleSheriff, true},
-		{RoleVillager, false},
-		{RoleUnknown, false},
+		{name: "mafia", role: RoleMafia, expected: true},
+		{name: "doctor", role: RoleDoctor, expected: true},
+		{name: "sheriff", role: RoleSheriff, expected: true},
+		{name: "villager", role: RoleVillager, expected: false},
+		{name: "unknown", role: RoleUnknown, expected: false},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.role.String(), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			result := tt.role.HasNightAction()
 			if result != tt.expected {
-				t.Errorf("%s.HasNightAction(): got %v, expected %v",
-					tt.role, result, tt.expected)
+				t.Errorf("got %v, expected %v", result, tt.expected)
 			}
 		})
 	}
 }
-
-// --- Player Helper Tests --- //

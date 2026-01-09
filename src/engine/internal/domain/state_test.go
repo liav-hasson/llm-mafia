@@ -10,11 +10,13 @@ import (
 // createTestGame creates a game with n players for testing
 // All players start with RoleUnknown
 func createTestGame(n int) *GameState {
-	ResetPlayerCounters() // ensure clean state
-	game := NewGameState()
+	ResetPlayerCounter() // ensure clean state
+	game := NewGameState("test")
 
 	for i := 0; i < n; i++ {
-		player, _ := NewPlayer("", "", RoleUnknown)
+		id := CreatePlayerID()
+		name := fmt.Sprintf("TestPlayer%d", i+1)
+		player, _ := NewPlayer(id, name, RoleUnknown)
 		game.AddPlayer(player)
 	}
 
@@ -24,7 +26,7 @@ func createTestGame(n int) *GameState {
 // --- NewGameState Tests ---
 
 func TestNewGameState(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 
 	if game.ID == "" {
 		t.Error("game ID should not be empty")
@@ -47,17 +49,27 @@ func TestNewGameState(t *testing.T) {
 }
 
 func TestCreateGameID(t *testing.T) {
-	id1 := CreateGameID()
-	id2 := CreateGameID()
+	id1 := CreateGameID("test")
+	id2 := CreateGameID("prod")
 
-	// IDs should be 5 characters
-	if len(id1) != 5 {
-		t.Errorf("game ID length: got %d, expected 5", len(id1))
+	// IDs should be prefix + "-" + 5 characters = 10 total for "test"
+	if len(id1) != 10 { // "test-" (5) + random (5)
+		t.Errorf("game ID length: got %d, expected 10", len(id1))
 	}
 
-	// IDs should be different (random)
-	if id1 == id2 {
-		t.Error("two game IDs should be different")
+	// IDs should start with prefix
+	if id1[:5] != "test-" {
+		t.Errorf("game ID should start with 'test-', got %s", id1)
+	}
+
+	if id2[:5] != "prod-" {
+		t.Errorf("game ID should start with 'prod-', got %s", id2)
+	}
+
+	// IDs with same prefix should have different random suffixes
+	id3 := CreateGameID("test")
+	if id1 == id3 {
+		t.Error("two game IDs with same prefix should have different suffixes")
 	}
 }
 
@@ -87,7 +99,7 @@ func TestWinnerString(t *testing.T) {
 // --- AddPlayer Tests ---
 
 func TestAddPlayer(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	player := &Player{ID: "test-1", Name: "Test Player", Role: RoleVillager, Alive: true}
 
 	result := game.AddPlayer(player)
@@ -104,7 +116,7 @@ func TestAddPlayer(t *testing.T) {
 }
 
 func TestAddPlayer_RejectsDuplicate(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	player1 := &Player{ID: "test-1", Name: "First", Role: RoleVillager, Alive: true}
 	player2 := &Player{ID: "test-1", Name: "Duplicate", Role: RoleMafia, Alive: true}
 
@@ -122,7 +134,7 @@ func TestAddPlayer_RejectsDuplicate(t *testing.T) {
 // --- GetPlayer Tests ---
 
 func TestGetPlayer(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	player := &Player{ID: "test-1", Name: "Test", Role: RoleVillager, Alive: true}
 	game.AddPlayer(player)
 
@@ -140,7 +152,7 @@ func TestGetPlayer(t *testing.T) {
 // --- GetAlivePlayers Tests ---
 
 func TestGetAlivePlayers(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	game.AddPlayer(&Player{ID: "1", Name: "Alive1", Alive: true})
 	game.AddPlayer(&Player{ID: "2", Name: "Dead", Alive: false})
 	game.AddPlayer(&Player{ID: "3", Name: "Alive2", Alive: true})
@@ -153,7 +165,7 @@ func TestGetAlivePlayers(t *testing.T) {
 }
 
 func TestGetAlivePlayers_EmptyGame(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	alive := game.GetAlivePlayers()
 
 	if len(alive) != 0 {
@@ -166,7 +178,7 @@ func TestGetAlivePlayers_EmptyGame(t *testing.T) {
 // --- EliminatePlayer Tests ---
 
 func TestEliminatePlayer(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	player := &Player{ID: "test-1", Name: "Test", Alive: true}
 	game.AddPlayer(player)
 
@@ -181,7 +193,7 @@ func TestEliminatePlayer(t *testing.T) {
 }
 
 func TestEliminatePlayer_NonexistentPlayer(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 
 	result := game.EliminatePlayer("nonexistent")
 
@@ -191,7 +203,7 @@ func TestEliminatePlayer_NonexistentPlayer(t *testing.T) {
 }
 
 func TestEliminatePlayer_AlreadyDead(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	player := &Player{ID: "test-1", Name: "Test", Alive: false}
 	game.AddPlayer(player)
 
@@ -205,7 +217,7 @@ func TestEliminatePlayer_AlreadyDead(t *testing.T) {
 // --- RegisterVote Tests ---
 
 func TestRegisterVote(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	game.AddPlayer(&Player{ID: "voter", Name: "Voter", Alive: true})
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: true})
 
@@ -220,7 +232,7 @@ func TestRegisterVote(t *testing.T) {
 }
 
 func TestRegisterVote_DeadVoter(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	game.AddPlayer(&Player{ID: "voter", Name: "Voter", Alive: false})
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: true})
 
@@ -232,7 +244,7 @@ func TestRegisterVote_DeadVoter(t *testing.T) {
 }
 
 func TestRegisterVote_DeadTarget(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	game.AddPlayer(&Player{ID: "voter", Name: "Voter", Alive: true})
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: false})
 
@@ -244,7 +256,7 @@ func TestRegisterVote_DeadTarget(t *testing.T) {
 }
 
 func TestRegisterVote_DuplicateVote(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	game.AddPlayer(&Player{ID: "voter", Name: "Voter", Alive: true})
 	game.AddPlayer(&Player{ID: "target1", Name: "Target1", Alive: true})
 	game.AddPlayer(&Player{ID: "target2", Name: "Target2", Alive: true})
@@ -263,7 +275,7 @@ func TestRegisterVote_DuplicateVote(t *testing.T) {
 // --- SetNightAction Tests ---
 
 func TestSetNightAction_Mafia(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	game.AddPlayer(&Player{ID: "mafia-1", Name: "Mafia", Role: RoleMafia, Alive: true})
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: true})
 
@@ -278,7 +290,7 @@ func TestSetNightAction_Mafia(t *testing.T) {
 }
 
 func TestSetNightAction_Doctor(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: true})
 
 	result := game.SetNightAction(RoleDoctor, "target", "target")
@@ -292,7 +304,7 @@ func TestSetNightAction_Doctor(t *testing.T) {
 }
 
 func TestSetNightAction_Sheriff(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	game.AddPlayer(&Player{ID: "sheriff-1", Name: "Sheriff", Role: RoleSheriff, Alive: true})
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: true})
 
@@ -307,7 +319,7 @@ func TestSetNightAction_Sheriff(t *testing.T) {
 }
 
 func TestSetNightAction_VillagerCannot(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	game.AddPlayer(&Player{ID: "villager-1", Name: "Villager", Role: RoleVillager, Alive: true})
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: true})
 
@@ -319,7 +331,7 @@ func TestSetNightAction_VillagerCannot(t *testing.T) {
 }
 
 func TestSetNightAction_AlreadySet(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	game.AddPlayer(&Player{ID: "target1", Name: "Target1", Alive: true})
 	game.AddPlayer(&Player{ID: "mafia-1", Name: "Mafia1", Role: RoleMafia, Alive: true})
 	game.AddPlayer(&Player{ID: "mafia-2", Name: "Mafia2", Role: RoleMafia, Alive: true})
@@ -339,7 +351,7 @@ func TestSetNightAction_AlreadySet(t *testing.T) {
 // --- ResetPhaseData Tests ---
 
 func TestResetPhaseData(t *testing.T) {
-	game := NewGameState()
+	game := NewGameState("test")
 	game.AddPlayer(&Player{ID: "voter", Name: "Voter", Alive: true})
 	game.AddPlayer(&Player{ID: "target", Name: "Target", Alive: true})
 
@@ -400,11 +412,11 @@ func TestShufflePlayerOrder_ContainsSamePlayers(t *testing.T) {
 }
 
 func TestShufflePlayerOrder_ExcludesDeadPlayers(t *testing.T) {
-	ResetPlayerCounters()
-	game := NewGameState()
+	ResetPlayerCounter()
+	game := NewGameState("test")
 
-	alive, _ := NewPlayer("", "", RoleUnknown)
-	dead, _ := NewPlayer("", "", RoleUnknown)
+	alive, _ := NewPlayer(CreatePlayerID(), "Alive", RoleUnknown)
+	dead, _ := NewPlayer(CreatePlayerID(), "Dead", RoleUnknown)
 	dead.Alive = false
 
 	game.AddPlayer(alive)
@@ -418,7 +430,7 @@ func TestShufflePlayerOrder_ExcludesDeadPlayers(t *testing.T) {
 }
 
 func TestAssignRolesToPlayers(t *testing.T) {
-	ResetPlayerCounters()
+	ResetPlayerCounter()
 	game := createTestGame(6)
 
 	// should create 2 mafia, 2 villagers, 1 doctor, 1 sheriff
@@ -482,7 +494,7 @@ func TestIsGameOver(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			game := NewGameState()
+			game := NewGameState("test")
 			for i, role := range tt.roles {
 				id := fmt.Sprintf("p%d", i)
 				game.AddPlayer(&Player{ID: id, Name: id, Role: role, Alive: true})

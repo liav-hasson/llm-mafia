@@ -1,223 +1,141 @@
 package config
 
-// this package provides a centralized loader for runtime
-// configuration used by the engine. It reads values from environment variables,
-// applies sensible defaults, and validates the result. The file intentionally
-// uses only the standard library so it's easy to test and understand.
-// kubernetes controller values can override these values.
-
 import (
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
 	"time"
+
+	"github.com/caarlos0/env/v11"
 )
 
-// Config holds all runtime configuration for the engine.
-// Environment variable names are suggested in comments on each field.
 type Config struct {
-	// Kafka connection settings - list of broker connections
-	// KAFKA_BROKERS="broker1:9092,broker2:9092"
-	KafkaBrokers []string
+	// -------------
+	// Kafka
+	// -------------
 
-	// KAFKA_CLIENT_ID, KAFKA_GROUP_ID (optional, useful for debugging)
-	KafkaClientID string
-	KafkaGroupID  string
+	// ENGINE_KAFKA_BROKERS="broker1:9092,broker2:9092"
+	// envDefault is used instead of default (doesnt work for this lib)
+	KafkaBrokers []string `env:"ENGINE_KAFKA_BROKERS" envSeparator:"," envDefault:"localhost:9092"`
 
-	// Coarse topic names (no role/chat/vote prefixes)
-	// ENGINE_EVENTS_TOPIC (default: engine.events)
-	EngineEventsTopic string
-	// PLAYER_ACTIONS_TOPIC (default: player.actions)
-	PlayerActionsTopic string
+	// Optional, useful for debugging
+	KafkaClientID string `env:"ENGINE_KAFKA_CLIENT_ID" envDefault:"mafia-engine"`
+	KafkaGroupID  string `env:"ENGINE_KAFKA_GROUP_ID" envDefault:"mafia-engine-group"`
 
-	// Timeouts and durations
-	// KAFKA_CONSUMER_TIMEOUT (e.g. "2s")
-	KafkaConsumerTimeout time.Duration
-	// KAFKA_PRODUCER_TIMEOUT (e.g. "2s")
-	KafkaProducerTimeout time.Duration
-	// HTTP_TIMEOUT for external calls (e.g. Ollama) (optional)
-	HTTPTimeout time.Duration
+	// Topics (coarse-grained, no role/chat prefixes)
+	EngineEventsTopic  string `env:"ENGINE_EVENTS_TOPIC" envDefault:"engine.events"`
+	PlayerActionsTopic string `env:"ENGINE_PLAYER_ACTIONS_TOPIC" envDefault:"player.actions"`
 
-	// Game settings (defaults mirror previous constants)
-	// GAME_MIN_PLAYERS (default 6)
-	GameMinPlayers int
-	// GAME_MAX_PLAYERS (default 12)
-	GameMaxPlayers int
+	// Timeouts
+	KafkaConsumerTimeout time.Duration `env:"ENGINE_KAFKA_CONSUMER_TIMEOUT" envDefault:"2s"`
+	KafkaProducerTimeout time.Duration `env:"ENGINE_KAFKA_PRODUCER_TIMEOUT" envDefault:"2s"`
 
-	// Agent mode: mock or llm (AGENT_MODE, default: mock)
-	AgentMode string
+	// External calls (e.g. Ollama)
+	HTTPTimeout time.Duration `env:"ENGINE_HTTP_TIMEOUT" envDefault:"5s"`
 
-	// Logging / environment
-	// LOG_LEVEL (optional; default: info)
-	LogLevel string
-	// ENV (optional; dev/prod)
-	Env string
+	// -------------
+	// Game
+	// -------------
 
-	// Feature flags (optional)
-	// ENABLE_ROLE_SECRETS (optional: "true"/"false")
-	EnableRoleSecrets bool
+	GameMinPlayers int      `env:"ENGINE_GAME_MIN_PLAYERS" envDefault:"6"`
+	GameMaxPlayers int      `env:"ENGINE_GAME_MAX_PLAYERS" envDefault:"12"`
+	GameIDPrefix   string   `env:"ENGINE_GAME_ID_PREFIX" envDefault:"game"`
+	PlayerNames    []string `env:"ENGINE_PLAYER_NAMES" envSeparator:"," envDefault:"Gilbert McDonald,Dorothy Bird,Ernest Preston,Vincent Schultz,Joanne Sloan,Lana Moran,Adrienne Fuller,Greg Bennett,Curt Simon,Rachel McMillan,Dustin Eastman,Willard Mendez"`
+
+	// Phase timeouts (how long each phase lasts before auto-advancing)
+	PhaseNightTimeout  time.Duration `env:"ENGINE_PHASE_NIGHT_TIMEOUT" envDefault:"2m"`
+	PhaseDayTimeout    time.Duration `env:"ENGINE_PHASE_DAY_TIMEOUT" envDefault:"5m"`
+	PhaseVotingTimeout time.Duration `env:"ENGINE_PHASE_VOTING_TIMEOUT" envDefault:"1m"`
+
+	// mock | llm
+	AgentMode string `env:"ENGINE_AGENT_MODE" envDefault:"mock"`
+
+	// -------------
+	// Logging
+	// -------------
+
+	LogLevel string `env:"ENGINE_LOG_LEVEL" envDefault:"info"`
+	Env      string `env:"ENGINE_ENV" envDefault:"dev"`
+
+	// Feature flags
+	EnableRoleSecrets bool `env:"ENGINE_ENABLE_ROLE_SECRETS" envDefault:"false"`
 }
 
-// DefaultConfig returns a Config populated with sensible defaults.
-func DefaultConfig() *Config {
-	return &Config{
-		KafkaBrokers:         []string{"localhost:9092"},
-		KafkaClientID:        "mafia-engine",
-		KafkaGroupID:         "mafia-engine-group",
-		EngineEventsTopic:    "engine.events",
-		PlayerActionsTopic:   "player.actions",
-		KafkaConsumerTimeout: 2 * time.Second,
-		KafkaProducerTimeout: 2 * time.Second,
-		HTTPTimeout:          5 * time.Second,
-		GameMinPlayers:       6,
-		GameMaxPlayers:       12,
-		AgentMode:            "mock",
-		LogLevel:             "info",
-		Env:                  "dev",
-		EnableRoleSecrets:    false,
-	}
-}
-
-// LoadConfig reads environment variables, applies defaults and returns a Config.
-// It returns an error for invalid values or missing required settings.
-
+// Load loads configuration from environment variables,
+// applies defaults, and validates the result.
 func LoadConfig() (*Config, error) {
-	cfg := DefaultConfig()
+	var cfg Config
 
-	if v, ok := lookupEnvTrim("KAFKA_BROKERS"); ok && v != "" {
-		cfg.KafkaBrokers = parseCommaList(v)
-	}
-
-	if v, ok := lookupEnvTrim("KAFKA_CLIENT_ID"); ok && v != "" {
-		cfg.KafkaClientID = v
-	}
-	if v, ok := lookupEnvTrim("KAFKA_GROUP_ID"); ok && v != "" {
-		cfg.KafkaGroupID = v
+	if err := env.Parse(&cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse environment variables: %w", err)
 	}
 
-	// Coarse topic names
-	if v, ok := lookupEnvTrim("ENGINE_EVENTS_TOPIC"); ok && v != "" {
-		cfg.EngineEventsTopic = v
-	}
-	if v, ok := lookupEnvTrim("PLAYER_ACTIONS_TOPIC"); ok && v != "" {
-		cfg.PlayerActionsTopic = v
-	}
-
-	// durations
-	if v, ok := lookupEnvTrim("KAFKA_CONSUMER_TIMEOUT"); ok && v != "" {
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid KAFKA_CONSUMER_TIMEOUT: %w", err)
-		}
-		cfg.KafkaConsumerTimeout = d
-	}
-	if v, ok := lookupEnvTrim("KAFKA_PRODUCER_TIMEOUT"); ok && v != "" {
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid KAFKA_PRODUCER_TIMEOUT: %w", err)
-		}
-		cfg.KafkaProducerTimeout = d
-	}
-	if v, ok := lookupEnvTrim("HTTP_TIMEOUT"); ok && v != "" {
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid HTTP_TIMEOUT: %w", err)
-		}
-		cfg.HTTPTimeout = d
-	}
-
-	// integers
-	if v, ok := lookupEnvTrim("GAME_MIN_PLAYERS"); ok && v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid GAME_MIN_PLAYERS: %w", err)
-		}
-		cfg.GameMinPlayers = n
-	}
-	if v, ok := lookupEnvTrim("GAME_MAX_PLAYERS"); ok && v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid GAME_MAX_PLAYERS: %w", err)
-		}
-		cfg.GameMaxPlayers = n
-	}
-
-	if v, ok := lookupEnvTrim("AGENT_MODE"); ok && v != "" {
-		cfg.AgentMode = v
-	}
-
-	if v, ok := lookupEnvTrim("LOG_LEVEL"); ok && v != "" {
-		cfg.LogLevel = v
-	}
-	if v, ok := lookupEnvTrim("ENV"); ok && v != "" {
-		cfg.Env = v
-	}
-
-	if v, ok := lookupEnvTrim("ENABLE_ROLE_SECRETS"); ok && v != "" {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid ENABLE_ROLE_SECRETS: %w", err)
-		}
-		cfg.EnableRoleSecrets = b
-	}
-
-	// Validate required fields
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
 
-	return cfg, nil
+	return &cfg, nil
 }
 
 // Validate checks config sanity and returns an error for invalid settings.
 func (c *Config) Validate() error {
 	if len(c.KafkaBrokers) == 0 {
-		return errors.New("no kafka brokers configured (KAFKA_BROKERS)")
+		return errors.New("ENGINE_KAFKA_BROKERS must not be empty")
 	}
+
 	if c.KafkaConsumerTimeout <= 0 {
-		return errors.New("KAFKA_CONSUMER_TIMEOUT must be > 0")
+		return errors.New("ENGINE_KAFKA_CONSUMER_TIMEOUT must be > 0")
 	}
+
 	if c.KafkaProducerTimeout <= 0 {
-		return errors.New("KAFKA_PRODUCER_TIMEOUT must be > 0")
+		return errors.New("ENGINE_KAFKA_PRODUCER_TIMEOUT must be > 0")
 	}
+
+	if c.HTTPTimeout <= 0 {
+		return errors.New("ENGINE_HTTP_TIMEOUT must be > 0")
+	}
+
 	if c.GameMinPlayers <= 0 {
-		return errors.New("GAME_MIN_PLAYERS must be > 0")
+		return errors.New("ENGINE_GAME_MIN_PLAYERS must be > 0")
 	}
+
 	if c.GameMaxPlayers < c.GameMinPlayers {
-		return errors.New("GAME_MAX_PLAYERS must be >= GAME_MIN_PLAYERS")
+		return errors.New("ENGINE_GAME_MAX_PLAYERS must be >= ENGINE_GAME_MIN_PLAYERS")
 	}
+
+	if c.GameIDPrefix == "" {
+		return errors.New("ENGINE_GAME_ID_PREFIX must not be empty")
+	}
+
+	if len(c.PlayerNames) == 0 {
+		return errors.New("ENGINE_PLAYER_NAMES must not be empty")
+	}
+
+	if c.PhaseNightTimeout <= 0 {
+		return errors.New("ENGINE_PHASE_NIGHT_TIMEOUT must be > 0")
+	}
+
+	if c.PhaseDayTimeout <= 0 {
+		return errors.New("ENGINE_PHASE_DAY_TIMEOUT must be > 0")
+	}
+
+	if c.PhaseVotingTimeout <= 0 {
+		return errors.New("ENGINE_PHASE_VOTING_TIMEOUT must be > 0")
+	}
+
 	if c.EngineEventsTopic == "" {
 		return errors.New("ENGINE_EVENTS_TOPIC must not be empty")
 	}
+
 	if c.PlayerActionsTopic == "" {
-		return errors.New("PLAYER_ACTIONS_TOPIC must not be empty")
+		return errors.New("ENGINE_PLAYER_ACTIONS_TOPIC must not be empty")
 	}
+
+	switch c.AgentMode {
+	case "mock", "llm":
+		// ok
+	default:
+		return fmt.Errorf("ENGINE_AGENT_MODE must be one of [mock, llm], got %q", c.AgentMode)
+	}
+
 	return nil
-}
-
-// lookupEnvTrim is a small helper that wraps os.LookupEnv and trims spaces.
-func lookupEnvTrim(key string) (string, bool) {
-	v, ok := os.LookupEnv(key)
-	if !ok {
-		return "", false
-	}
-	return strings.TrimSpace(v), true
-}
-
-// parseCSV splits a comma-separated string and trims elements.
-func parseCommaList(s string) []string {
-	if s == "" {
-		return nil
-	}
-	parts := strings.Split(s, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		t := strings.TrimSpace(p)
-		if t != "" {
-			out = append(out, t)
-		}
-	}
-	return out
 }

@@ -5,31 +5,41 @@ import (
 	"time"
 )
 
-func TestDefaultConfig(t *testing.T) {
-	cfg := DefaultConfig()
-
-	if cfg.EngineEventsTopic != "engine.events" {
-		t.Fatalf("expected default EngineEventsTopic 'engine.events', got %q", cfg.EngineEventsTopic)
+func TestLoadConfigDefaults(t *testing.T) {
+	// Test that defaults work
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("LoadConfig with defaults failed: %v", err)
 	}
-	if cfg.PlayerActionsTopic != "player.actions" {
-		t.Fatalf("expected default PlayerActionsTopic 'player.actions', got %q", cfg.PlayerActionsTopic)
+
+	// Check some key defaults
+	if len(cfg.KafkaBrokers) != 1 || cfg.KafkaBrokers[0] != "localhost:9092" {
+		t.Errorf("expected default broker localhost:9092, got %v", cfg.KafkaBrokers)
 	}
 	if cfg.GameMinPlayers != 6 {
-		t.Fatalf("expected default GameMinPlayers 6, got %d", cfg.GameMinPlayers)
+		t.Errorf("expected default GameMinPlayers 6, got %d", cfg.GameMinPlayers)
 	}
-	if cfg.KafkaConsumerTimeout != 2*time.Second {
-		t.Fatalf("expected default KafkaConsumerTimeout 2s, got %v", cfg.KafkaConsumerTimeout)
+	if cfg.GameMaxPlayers != 12 {
+		t.Errorf("expected default GameMaxPlayers 12, got %d", cfg.GameMaxPlayers)
+	}
+	if cfg.PhaseNightTimeout != 2*time.Minute {
+		t.Errorf("expected default PhaseNightTimeout 2m, got %v", cfg.PhaseNightTimeout)
+	}
+	if cfg.GameIDPrefix != "game" {
+		t.Errorf("expected default GameIDPrefix 'game', got %q", cfg.GameIDPrefix)
 	}
 }
 
 func TestLoadConfigEnvOverrides(t *testing.T) {
-	t.Setenv("KAFKA_BROKERS", "b1:9092,b2:9092")
+	t.Setenv("ENGINE_KAFKA_BROKERS", "b1:9092,b2:9092")
 	t.Setenv("ENGINE_EVENTS_TOPIC", "custom.events")
-	t.Setenv("PLAYER_ACTIONS_TOPIC", "custom.actions")
-	t.Setenv("GAME_MIN_PLAYERS", "4")
-	t.Setenv("GAME_MAX_PLAYERS", "8")
-	t.Setenv("KAFKA_CONSUMER_TIMEOUT", "3s")
-	t.Setenv("ENABLE_ROLE_SECRETS", "true")
+	t.Setenv("ENGINE_PLAYER_ACTIONS_TOPIC", "custom.actions")
+	t.Setenv("ENGINE_GAME_MIN_PLAYERS", "4")
+	t.Setenv("ENGINE_GAME_MAX_PLAYERS", "8")
+	t.Setenv("ENGINE_KAFKA_CONSUMER_TIMEOUT", "3s")
+	t.Setenv("ENGINE_ENABLE_ROLE_SECRETS", "true")
+	t.Setenv("ENGINE_PHASE_DAY_TIMEOUT", "10m")
+	t.Setenv("ENGINE_GAME_ID_PREFIX", "test")
 
 	cfg, err := LoadConfig()
 	if err != nil {
@@ -54,12 +64,18 @@ func TestLoadConfigEnvOverrides(t *testing.T) {
 	if !cfg.EnableRoleSecrets {
 		t.Fatalf("expected EnableRoleSecrets true")
 	}
+	if cfg.PhaseDayTimeout != 10*time.Minute {
+		t.Fatalf("expected PhaseDayTimeout 10m, got %v", cfg.PhaseDayTimeout)
+	}
+	if cfg.GameIDPrefix != "test" {
+		t.Fatalf("expected GameIDPrefix 'test', got %q", cfg.GameIDPrefix)
+	}
 }
 
 func TestLoadConfigInvalidValues(t *testing.T) {
-	t.Setenv("KAFKA_CONSUMER_TIMEOUT", "not-a-duration")
+	t.Setenv("ENGINE_KAFKA_CONSUMER_TIMEOUT", "not-a-duration")
 	_, err := LoadConfig()
 	if err == nil {
-		t.Fatalf("expected error for invalid KAFKA_CONSUMER_TIMEOUT, got nil")
+		t.Fatalf("expected error for invalid ENGINE_KAFKA_CONSUMER_TIMEOUT, got nil")
 	}
 }
