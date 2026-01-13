@@ -2,6 +2,8 @@ package engine
 
 import (
 	"context"
+	"log"
+	"strconv"
 	"sync"
 	"time"
 
@@ -25,6 +27,7 @@ func NewTimerManager() *TimerManager {
 // SchedulePhaseTimeout schedules a timer to automatically advance to the next phase.
 // If a previous phase timer exists, it is cancelled first.
 // When the timer fires, it sends a PhaseChangeCommand to the command channel.
+// ctx must not be nil.
 func (tm *TimerManager) SchedulePhaseTimeout(
 	currentPhase domain.Phase,
 	round int,
@@ -33,6 +36,11 @@ func (tm *TimerManager) SchedulePhaseTimeout(
 	cmdCh chan Command,
 	ctx context.Context,
 ) {
+	if ctx == nil {
+		log.Printf("[TIMER] ERROR: nil context passed to SchedulePhaseTimeout, skipping timer")
+		return
+	}
+
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
@@ -42,25 +50,26 @@ func (tm *TimerManager) SchedulePhaseTimeout(
 		tm.phaseTimer = nil
 	}
 
-	// Create timer ID for debugging
-	tm.phaseTimerID = currentPhase.String() + "-round-" + string(rune(round))
+	// Create timer ID for debugging (fixed: was using string(rune(round)) which is wrong, converts numbers to unicode)
+	tm.phaseTimerID = currentPhase.String() + "-round-" + strconv.Itoa(round)
 
 	// Schedule new timer
+	timerID := tm.phaseTimerID // capture for closure
 	tm.phaseTimer = time.AfterFunc(duration, func() {
 		// Send phase change command when timer fires
 		cmd := &PhaseChangeCommand{NewPhase: nextPhase}
 
-		// Non-blocking send with context check
+		// Blocking send with context check only
+		// If channel is full, we block — dropping phase changes silently is dangerous
 		select {
 		case cmdCh <- cmd:
-			// Timer fired successfully, command sent
+			log.Printf("[TIMER] Phase timeout fired: %s, sent PhaseChangeCommand to %s", timerID, nextPhase)
 		case <-ctx.Done():
-			// Engine stopped, ignore
-		default:
-			// Command channel full (should not happen with buffered channel)
-			// TODO: Add logging/metrics for this edge case
+			log.Printf("[TIMER] Phase timeout fired but engine stopped: %s", timerID)
 		}
 	})
+
+	log.Printf("[TIMER] Scheduled phase timeout: %s, duration=%v, nextPhase=%s", tm.phaseTimerID, duration, nextPhase)
 }
 
 // CancelPhaseTimer stops the current phase timer if one is active.

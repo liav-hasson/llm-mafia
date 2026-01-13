@@ -21,9 +21,8 @@ type Config struct {
 	KafkaClientID string `env:"ENGINE_KAFKA_CLIENT_ID" envDefault:"mafia-engine"`
 	KafkaGroupID  string `env:"ENGINE_KAFKA_GROUP_ID" envDefault:"mafia-engine-group"`
 
-	// Topics (coarse-grained, no role/chat prefixes)
-	EngineEventsTopic  string `env:"ENGINE_EVENTS_TOPIC" envDefault:"engine.events"`
-	PlayerActionsTopic string `env:"ENGINE_PLAYER_ACTIONS_TOPIC" envDefault:"player.actions"`
+	// NOTE: Topic names are constants in kafka/topics.go (single source of truth)
+	// Do NOT add topic configuration here to avoid mismatch bugs.
 
 	// Timeouts
 	KafkaConsumerTimeout time.Duration `env:"ENGINE_KAFKA_CONSUMER_TIMEOUT" envDefault:"2s"`
@@ -120,14 +119,6 @@ func (c *Config) Validate() error {
 
 	if c.PhaseVotingTimeout <= 0 {
 		return errors.New("ENGINE_PHASE_VOTING_TIMEOUT must be > 0")
-	}
-
-	if c.EngineEventsTopic == "" {
-		return errors.New("ENGINE_EVENTS_TOPIC must not be empty")
-	}
-
-	if c.PlayerActionsTopic == "" {
-		return errors.New("ENGINE_PLAYER_ACTIONS_TOPIC must not be empty")
 	}
 
 	switch c.AgentMode {

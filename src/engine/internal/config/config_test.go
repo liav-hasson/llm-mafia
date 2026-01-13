@@ -32,8 +32,6 @@ func TestLoadConfigDefaults(t *testing.T) {
 
 func TestLoadConfigEnvOverrides(t *testing.T) {
 	t.Setenv("ENGINE_KAFKA_BROKERS", "b1:9092,b2:9092")
-	t.Setenv("ENGINE_EVENTS_TOPIC", "custom.events")
-	t.Setenv("ENGINE_PLAYER_ACTIONS_TOPIC", "custom.actions")
 	t.Setenv("ENGINE_GAME_MIN_PLAYERS", "4")
 	t.Setenv("ENGINE_GAME_MAX_PLAYERS", "8")
 	t.Setenv("ENGINE_KAFKA_CONSUMER_TIMEOUT", "3s")
@@ -48,12 +46,6 @@ func TestLoadConfigEnvOverrides(t *testing.T) {
 
 	if len(cfg.KafkaBrokers) != 2 {
 		t.Fatalf("expected 2 kafka brokers, got %d", len(cfg.KafkaBrokers))
-	}
-	if cfg.EngineEventsTopic != "custom.events" {
-		t.Fatalf("expected EngineEventsTopic 'custom.events', got %q", cfg.EngineEventsTopic)
-	}
-	if cfg.PlayerActionsTopic != "custom.actions" {
-		t.Fatalf("expected PlayerActionsTopic 'custom.actions', got %q", cfg.PlayerActionsTopic)
 	}
 	if cfg.GameMinPlayers != 4 || cfg.GameMaxPlayers != 8 {
 		t.Fatalf("expected GameMinPlayers 4 and GameMaxPlayers 8, got %d/%d", cfg.GameMinPlayers, cfg.GameMaxPlayers)

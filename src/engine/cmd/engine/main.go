@@ -27,22 +27,22 @@ func main() {
 	}
 
 	log.Printf("Starting Mafia Engine with config: brokers=%v, topic=%s, groupID=%s, maxPlayers=%d",
-		cfg.KafkaBrokers, cfg.PlayerActionsTopic, cfg.KafkaGroupID, cfg.GameMaxPlayers)
+		cfg.KafkaBrokers, kafka.PlayerActionsTopic, cfg.KafkaGroupID, cfg.GameMaxPlayers)
 
 	// Create Kafka producer for publishing authoritative events
-	producer, err := kafka.NewKafkaProducer(cfg.KafkaBrokers, cfg.EngineEventsTopic)
+	producer, err := kafka.NewKafkaProducer(cfg.KafkaBrokers, cfg.KafkaClientID)
 	if err != nil {
 		log.Fatalf("Failed to create Kafka producer: %v", err)
 	}
-	log.Printf("Kafka producer created for topic: %s", cfg.EngineEventsTopic)
+	log.Printf("Kafka producer created for topic: %s", kafka.EngineEventsTopic)
 
 	// Create Kafka consumer for receiving player actions
 	consumer, err := kafka.NewKafkaConsumer(
 		cfg.KafkaBrokers,
 		// kafka-go limitation: a consumer can only subscribe to a single topic
 		// alternative in kafka-go is to use 'GroupTopics' (read more about this)
-		// a good practice IS to use a single costumer for a single topic anyway
-		cfg.PlayerActionsTopic,
+		// a good practice IS to use a single consumer for a single topic anyway
+		kafka.PlayerActionsTopic,
 		cfg.KafkaGroupID,
 	)
 	if err != nil {
@@ -51,7 +51,7 @@ func main() {
 		}
 		log.Fatalf("Failed to create Kafka consumer: %v", err)
 	}
-	log.Printf("Kafka consumer created for topic: %s, group: %s", cfg.PlayerActionsTopic, cfg.KafkaGroupID)
+	log.Printf("Kafka consumer created for topic: %s, group: %s", kafka.PlayerActionsTopic, cfg.KafkaGroupID)
 
 	// Initialize game state with configuration
 	// Start in Waiting phase (players can join)
